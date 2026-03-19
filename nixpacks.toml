@@ -12,6 +12,3 @@ cmds = [
 [phases.build]
 dependsOn = ['install']
 cmds = ['php artisan optimize:clear']
-
-[start]
-cmd = "echo 'Starting application...' && php artisan migrate --force && echo 'Migration completed' && php artisan serve --host 0.0.0.0 --port $PORT"
