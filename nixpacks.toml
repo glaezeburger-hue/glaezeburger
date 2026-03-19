@@ -14,4 +14,5 @@ dependsOn = ['install']
 cmds = ['php artisan optimize:clear']
 
 [start]
-cmd = "sleep 5 && php artisan migrate:fresh --force && php artisan view:cache && php artisan route:cache && php artisan serve --host 0.0.0.0 --port $PORT"
+# Gunakan migrate:fresh hanya UNTUK SEKARANG agar tabel dibuat ulang dari nol
+cmd = "php artisan migrate:fresh --force && php artisan db:seed --force && php artisan serve --host 0.0.0.0 --port $PORT"
