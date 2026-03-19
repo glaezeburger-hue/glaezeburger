@@ -1,0 +1,39 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\PosController;
+use App\Http\Controllers\TransactionController;
+
+Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+// Products
+Route::resource('products', ProductController::class);
+Route::post('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
+
+// Categories (AJAX mostly)
+Route::resource('categories', CategoryController::class)->only(['index', 'store']);
+
+// Point of Sale
+Route::get('pos', [PosController::class, 'index'])->name('pos.index');
+Route::post('pos/checkout', [TransactionController::class, 'store'])->name('pos.checkout');
+
+// Kitchen Display System (KDS)
+use App\Http\Controllers\KdsController;
+Route::get('kds', [KdsController::class, 'index'])->name('kds.index');
+Route::get('api/kds/orders', [KdsController::class, 'getPendingOrders']);
+Route::post('api/kds/orders/{transaction}/complete', [KdsController::class, 'markAsComplete']);
