@@ -14,4 +14,4 @@ dependsOn = ['install']
 cmds = ['php artisan optimize:clear']
 
 [start]
-cmd = "sleep 5 && php artisan migrate --force && php artisan view:cache && php artisan route:cache && php artisan serve --host 0.0.0.0 --port $PORT"
+cmd = "sleep 5 && php artisan migrate:fresh --force && php artisan view:cache && php artisan route:cache && php artisan serve --host 0.0.0.0 --port $PORT"
