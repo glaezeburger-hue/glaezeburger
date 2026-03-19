@@ -12,3 +12,6 @@ cmds = [
 [phases.build]
 dependsOn = ['install']
 cmds = ['php artisan optimize:clear']
+
+[start]
+cmd = "php artisan migrate --force && php artisan optimize && php-fpm -D && nginx -g 'daemon off;'"
