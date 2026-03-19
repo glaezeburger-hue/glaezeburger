@@ -14,4 +14,4 @@ dependsOn = ['install']
 cmds = ['php artisan optimize:clear']
 
 [start]
-cmd = "php artisan migrate --force && php artisan optimize && php artisan serve --host 0.0.0.0 --port $PORT"
+cmd = "echo 'Starting application...' && php artisan migrate --force && echo 'Migration completed' && php artisan serve --host 0.0.0.0 --port $PORT"
