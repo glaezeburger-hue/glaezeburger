@@ -12,12 +12,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->decimal('subtotal', 12, 2)->after('user_id')->default(0);
-            $table->enum('discount_type', ['percentage', 'nominal'])->nullable()->after('subtotal');
-            $table->decimal('discount_value', 12, 2)->default(0)->after('discount_type');
-            $table->decimal('discount_amount', 12, 2)->default(0)->after('discount_value');
-            $table->decimal('net_sales', 12, 2)->after('discount_amount')->default(0);
-            $table->decimal('tax_amount', 12, 2)->default(0)->after('net_sales');
+            if (!Schema::hasColumn('transactions', 'subtotal')) {
+                $table->decimal('subtotal', 12, 2)->after('user_id')->default(0);
+            }
+            if (!Schema::hasColumn('transactions', 'discount_type')) {
+                $table->enum('discount_type', ['percentage', 'nominal'])->nullable()->after('subtotal');
+            }
+            if (!Schema::hasColumn('transactions', 'discount_value')) {
+                $table->decimal('discount_value', 12, 2)->default(0)->after('discount_type');
+            }
+            if (!Schema::hasColumn('transactions', 'discount_amount')) {
+                $table->decimal('discount_amount', 12, 2)->default(0)->after('discount_value');
+            }
+            if (!Schema::hasColumn('transactions', 'net_sales')) {
+                $table->decimal('net_sales', 12, 2)->after('discount_amount')->default(0);
+            }
+            if (!Schema::hasColumn('transactions', 'tax_amount')) {
+                $table->decimal('tax_amount', 12, 2)->default(0)->after('net_sales');
+            }
         });
     }
 

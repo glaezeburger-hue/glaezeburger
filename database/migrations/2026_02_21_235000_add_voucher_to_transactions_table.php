@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->foreignId('voucher_id')->nullable()->after('subtotal')->constrained('vouchers')->nullOnDelete();
-            $table->decimal('voucher_discount_amount', 12, 2)->default(0)->after('voucher_id');
+            if (!Schema::hasColumn('transactions', 'voucher_id')) {
+                $table->foreignId('voucher_id')->nullable()->after('subtotal')->constrained('vouchers')->nullOnDelete();
+            }
+            if (!Schema::hasColumn('transactions', 'voucher_discount_amount')) {
+                $table->decimal('voucher_discount_amount', 12, 2)->default(0)->after('voucher_id');
+            }
         });
     }
 
