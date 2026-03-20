@@ -12,6 +12,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\KdsController;
 use App\Http\Controllers\CashRegisterController;
+use App\Http\Controllers\Admin\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -83,6 +84,9 @@ Route::middleware('auth')->group(function () {
         // Expense Categories API
         Route::get('expense-categories', [ExpenseController::class, 'categories'])->name('expense-categories.index');
         Route::post('expense-categories', [ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+
+        // User Management
+        Route::resource('users', UserController::class)->names('admin.users');
     });
 
     // ==========================================

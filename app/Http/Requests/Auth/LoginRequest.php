@@ -49,6 +49,17 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Additional check for account status
+        if (! Auth::user()->status) {
+            Auth::logout();
+            $this->session()->invalidate();
+            $this->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun Anda dinonaktifkan. Silakan hubungi Owner.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

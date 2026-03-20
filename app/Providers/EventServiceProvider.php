@@ -25,7 +25,14 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Event::listen(
+            \Illuminate\Auth\Events\Login::class,
+            function ($event) {
+                $event->user->update([
+                    'last_login_at' => now(),
+                ]);
+            }
+        );
     }
 
     /**
