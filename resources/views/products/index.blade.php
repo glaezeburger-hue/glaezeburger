@@ -144,16 +144,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </button>
+                <button @click="openAddModal()" 
+                    class="h-[46px] w-[46px] flex items-center justify-center text-white bg-smash-blue border border-blue-100/50 rounded-2xl hover:bg-blue-50 hover:text-smash-blue transition-all shadow-sm active:scale-90" 
+                    title="Add Product">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </button>
             </div>
-        </div>
-        
-        <button @click="openAddModal()" 
-            class="inline-flex items-center justify-center px-8 py-3.5 border border-transparent text-sm font-black rounded-2xl shadow-xl shadow-smash-blue/20 text-white bg-smash-blue hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-smash-blue/20 transition-all transform hover:-translate-y-0.5 active:scale-95">
-            <svg class="w-5 h-5 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Add New Product
-        </button>
+        </div>    
     </div>
 
     <!-- Product Table -->

@@ -86,7 +86,7 @@
                 <div class="p-6 bg-gray-50/50 border border-gray-100 rounded-2xl space-y-4">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cash Diinput</span>
-                        <span class="text-xs font-black text-gray-900">Rp {{ number_format($shift->closing_balance, 0, ',', '.') }}</span>
+                        <span class="text-xs font-black text-gray-900">{{ number_format($shift->closing_balance, 0, ',', '.') }}</span>
                     </div>
                     <div class="flex justify-between items-center pt-4 border-t border-gray-100">
                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Selisih</span>
