@@ -35,6 +35,7 @@ class RawMaterialController extends Controller
             'unit' => 'required|string|max:50',
             'stock' => 'required|numeric|min:0',
             'low_stock_threshold' => 'required|numeric|min:0',
+            'cost_per_unit' => 'required|numeric|min:0',
         ]);
 
         RawMaterial::create($validated);
@@ -53,6 +54,7 @@ class RawMaterialController extends Controller
             'unit' => 'required|string|max:50',
             'stock' => 'required|numeric|min:0',
             'low_stock_threshold' => 'required|numeric|min:0',
+            'cost_per_unit' => 'required|numeric|min:0',
         ]);
 
         $rawMaterial->update($validated);

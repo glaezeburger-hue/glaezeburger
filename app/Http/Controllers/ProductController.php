@@ -29,7 +29,7 @@ class ProductController extends Controller
 
         $products = $query->latest()->paginate(10)->withQueryString();
         $categories = Category::orderBy('name')->get();
-        $rawMaterials = RawMaterial::orderBy('name')->get(['id', 'name', 'unit']);
+        $rawMaterials = RawMaterial::orderBy('name')->get(['id', 'name', 'unit', 'cost_per_unit']);
 
         return view('products.index', compact('products', 'categories', 'rawMaterials'));
     }
@@ -77,6 +77,10 @@ class ProductController extends Controller
                 }
             }
             $product->rawMaterials()->sync($syncData);
+
+            // Auto-update cost_price from calculated HPP
+            $product->load('rawMaterials');
+            $product->update(['cost_price' => $product->calculateHpp()]);
         }
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
@@ -142,6 +146,10 @@ class ProductController extends Controller
                 }
             }
             $product->rawMaterials()->sync($syncData);
+
+            // Auto-update cost_price from calculated HPP
+            $product->load('rawMaterials');
+            $product->update(['cost_price' => $product->calculateHpp()]);
         } else {
             // Un-sync if it's no longer recipe-based
             $product->rawMaterials()->sync([]);

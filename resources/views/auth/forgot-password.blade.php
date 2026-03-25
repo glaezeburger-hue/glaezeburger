@@ -1,42 +1,88 @@
 <x-guest-layout>
-    <div class="w-full max-w-sm">
-        <!-- Brand Header -->
-        <div class="flex flex-col items-center mb-10">
-            <div class="w-20 h-20 bg-smash-blue rounded-[2rem] flex items-center justify-center shadow-2xl shadow-smash-blue/20 mb-6 transform -rotate-3">
-                <span class="text-white font-black text-4xl italic">G</span>
+    <main class="flex h-screen w-full flex-col md:flex-row overflow-hidden">
+        <!-- Left Panel: Expression Side (60%) -->
+        <section class="hidden md:flex md:w-[60%] bg-smash-blue relative overflow-hidden items-center justify-center p-12">
+            <div class="absolute inset-0 opacity-20 pointer-events-none">
+                <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white blur-[120px] rounded-full"></div>
+                <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-300 blur-[120px] rounded-full"></div>
             </div>
-            <h1 class="text-gray-900 font-black text-4xl tracking-tighter leading-none italic uppercase">GLÆZE</h1>
-            <p class="text-gray-400 font-bold text-[10px] tracking-widest uppercase mt-3 px-4 py-1.5 bg-gray-100/50 rounded-full">Account Recovery</p>
-        </div>
-
-        <!-- Forgot Password Card -->
-        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-gray-100/50 p-10 relative overflow-hidden">
-            <div class="mb-8 text-center">
-                <h3 class="text-xl font-black text-gray-900 tracking-tighter italic uppercase">Identity Check</h3>
-                <p class="mt-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed">
-                    Enter your registered email and we'll transmit a secure reset link.
+            
+            <div class="relative z-10 text-center max-w-xl animate-fade-in-up">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-xl rounded-2xl mb-8 border border-white/20 shadow-2xl">
+                    <span class="text-white text-5xl font-black tracking-tighter italic">G</span>
+                </div>
+                <div class="uppercase tracking-[0.3em] text-white/50 text-sm font-bold mb-4">Account Recovery</div>
+                <h1 class="text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter mb-6 uppercase italic">
+                    Restore Your <br/>Access.
+                </h1>
+                <p class="text-xl text-white/70 font-medium leading-relaxed max-w-md mx-auto italic">
+                    Secure transmission protocol for terminal credential retrieval.
                 </p>
             </div>
 
-            <x-auth-session-status class="mb-6 text-[10px] font-bold text-green-600 uppercase tracking-widest text-center" :status="session('status')" />
+            <div class="absolute bottom-12 left-12 right-12 flex justify-between items-end">
+                <div class="flex flex-col gap-2">
+                    <div class="h-1 w-24 bg-white/20 rounded-full"></div>
+                    <div class="h-1 w-12 bg-white/20 rounded-full"></div>
+                </div>
+                <div class="text-[10px] text-white/30 uppercase tracking-[0.3em] font-mono">
+                    Recovery Module v1.0
+                </div>
+            </div>
+        </section>
 
-            <form method="POST" action="{{ route('password.email') }}" class="space-y-6">
-                @csrf
-                <div class="space-y-2">
-                    <label for="email" class="block text-[11px] font-black uppercase tracking-widest text-gray-400 px-1">Registered Key</label>
-                    <input id="email" class="block w-full rounded-[1.2rem] border-gray-100 bg-gray-50/50 py-4 px-6 text-[14px] font-bold text-gray-900 focus:bg-white focus:border-smash-blue/30 focus:ring-4 focus:ring-smash-blue/5 transition-all outline-none ring-0" type="email" name="email" :value="old('email')" required autofocus placeholder="name@smaesh.com" />
-                    <x-input-error :messages="$errors->get('email')" class="mt-2 text-[10px] text-red-500 font-bold uppercase italic tracking-widest" />
+        <!-- Right Panel: Utility Side (40%) -->
+        <section class="w-full md:w-[40%] bg-white flex items-center justify-center p-8 md:p-12">
+            <div class="w-full max-w-[420px] animate-fade-in">
+                <div class="mb-10 text-center md:text-left">
+                    <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Reset Password</h2>
+                    <p class="text-gray-500 text-sm font-medium">Enter your registered email to receive recovery tokens.</p>
                 </div>
 
-                <div class="pt-4 flex flex-col gap-4">
-                    <button type="submit" class="w-full flex justify-center items-center px-8 py-4 bg-smash-blue text-white rounded-xl text-[12px] font-black tracking-[0.2em] uppercase hover:bg-smash-blue/90 hover:shadow-xl transition-all duration-300">
-                        Transmit Link
-                    </button>
-                    <a href="{{ route('login') }}" class="text-center text-[10px] font-black text-gray-300 hover:text-smash-blue transition-colors uppercase tracking-[0.2em] italic">
-                        &larr; Back to Access
-                    </a>
+                <x-auth-session-status class="mb-6" :status="session('status')" />
+
+                <form method="POST" action="{{ route('password.email') }}" class="space-y-6">
+                    @csrf
+                    <!-- Identity Key -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-wider text-gray-400 ml-1" for="email">Registered Email</label>
+                        <input id="email" name="email" type="email" :value="old('email')" required autofocus
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl py-4 px-5 text-gray-900 font-bold placeholder:text-gray-300 focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue transition-all outline-none" 
+                            placeholder="name@glaeze.com"/>
+                        <x-input-error :messages="$errors->get('email')" class="mt-2 text-xs text-red-600 font-bold" />
+                    </div>
+
+                    <div class="pt-2 flex flex-col gap-4">
+                        <button class="w-full bg-smash-blue hover:bg-blue-700 text-white font-black py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-xl shadow-smash-blue/20 uppercase tracking-[0.2em] text-xs" type="submit">
+                            Send Secure Link
+                            <span class="material-symbols-outlined text-lg">transmit</span>
+                        </button>
+                        <a href="{{ route('login') }}" class="text-center text-[10px] font-black text-gray-300 hover:text-smash-blue transition-colors uppercase tracking-[0.3em] italic">
+                            &larr; Back to Access
+                        </a>
+                    </div>
+                </form>
+
+                <div class="mt-12 text-center md:text-left border-t border-gray-50 pt-10">
+                    <p class="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] leading-relaxed italic">
+                        © 2024 GLAEZE DIGITAL ARCHITECT. <br>
+                        SECURITY TERMINAL RECOVERY SYSTEM.
+                    </p>
                 </div>
-            </form>
-        </div>
-    </div>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in { animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
 </x-guest-layout>

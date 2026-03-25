@@ -16,6 +16,11 @@ class RawMaterial extends Model
         'unit',
         'stock',
         'low_stock_threshold',
+        'cost_per_unit',
+    ];
+
+    protected $casts = [
+        'cost_per_unit' => 'decimal:2',
     ];
 
     /**

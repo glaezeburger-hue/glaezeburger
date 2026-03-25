@@ -14,13 +14,14 @@
         sku: @js(old('sku', '')),
         unit: @js(old('unit', 'pcs')),
         stock: @js(old('stock', '')),
-        low_stock_threshold: @js(old('low_stock_threshold', '10'))
+        low_stock_threshold: @js(old('low_stock_threshold', '10')),
+        cost_per_unit: @js(old('cost_per_unit', ''))
     },
     
     openAddModal() {
         this.editing = false;
         this.formAction = '{{ route('raw-materials.store') }}';
-        this.rawMaterial = { id: '', name: '', sku: '', unit: 'pcs', stock: '', low_stock_threshold: '10' };
+        this.rawMaterial = { id: '', name: '', sku: '', unit: 'pcs', stock: '', low_stock_threshold: '10', cost_per_unit: '' };
         this.showModal = true;
     },
     
@@ -66,6 +67,7 @@
                 <thead>
                     <tr class="bg-gray-50/50">
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Name & SKU</th>
+                        <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Harga Beli</th>
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Stock Level</th>
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Status</th>
                         <th class="px-4 md:px-6 py-5 text-right text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
@@ -77,6 +79,10 @@
                             <td class="px-4 md:px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-black text-gray-900">{{ $material->name }}</div>
                                 <div class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">{{ $material->sku }}</div>
+                            </td>
+                            <td class="px-4 md:px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-black text-gray-900">Rp {{ number_format($material->cost_per_unit, 0, ',', '.') }}</div>
+                                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">per {{ $material->unit }}</div>
                             </td>
                             <td class="px-4 md:px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-baseline gap-1">
@@ -108,7 +114,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center">
+                            <td colspan="5" class="px-6 py-12 text-center">
                                 <div class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                                     <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                                 </div>
@@ -211,6 +217,19 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <!-- Cost Per Unit -->
+                                <div>
+                                    <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Harga Beli (Cost Per Unit)</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <span class="text-gray-400 font-black text-[11px]">Rp</span>
+                                        </div>
+                                        <input type="number" step="0.01" name="cost_per_unit" x-model="rawMaterial.cost_per_unit" required
+                                            class="block w-full pl-10 pr-4 py-3 border-gray-200 rounded-2xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue text-sm transition-all bg-gray-50/30 shadow-sm">
+                                    </div>
+                                    <p class="mt-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Harga per <span x-text="rawMaterial.unit || 'unit'"></span></p>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">

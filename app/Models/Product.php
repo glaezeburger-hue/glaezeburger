@@ -106,4 +106,38 @@ class Product extends Model
                     ->withPivot('quantity')
                     ->withTimestamps();
     }
+
+    /**
+     * Calculate HPP (Harga Pokok Penjualan) from recipe ingredients.
+     * Sum of (pivot.quantity × raw_material.cost_per_unit)
+     *
+     * @return float
+     */
+    public function calculateHpp(): float
+    {
+        if (!$this->is_recipe_based || $this->rawMaterials->isEmpty()) {
+            return (float) $this->cost_price;
+        }
+
+        return $this->rawMaterials->sum(function ($material) {
+            return $material->pivot->quantity * $material->cost_per_unit;
+        });
+    }
+
+    /**
+     * Get Gross Profit Margin percentage.
+     * Formula: ((selling_price - HPP) / selling_price) × 100
+     *
+     * @return float|null
+     */
+    public function getGrossMarginAttribute(): ?float
+    {
+        if ($this->selling_price <= 0) {
+            return null;
+        }
+
+        $hpp = $this->calculateHpp();
+
+        return round((($this->selling_price - $hpp) / $this->selling_price) * 100, 1);
+    }
 }

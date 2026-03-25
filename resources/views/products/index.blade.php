@@ -26,6 +26,49 @@
     imagePreview: null,
     categories: @js($categories),
     rawMaterials: @js($rawMaterials ?? []),
+
+    get totalHpp() {
+        if (!this.product.is_recipe_based || !this.product.ingredients.length) return 0;
+        return this.product.ingredients.reduce((sum, ing) => {
+            const rm = this.rawMaterials.find(m => String(m.id) === String(ing.id));
+            const cost = rm ? parseFloat(rm.cost_per_unit || 0) : 0;
+            const qty = parseFloat(ing.quantity || 0);
+            return sum + (qty * cost);
+        }, 0);
+    },
+
+    get grossMargin() {
+        const price = parseFloat(this.product.selling_price || 0);
+        if (price <= 0) return null;
+        return (((price - this.totalHpp) / price) * 100).toFixed(1);
+    },
+
+    get marginColor() {
+        if (this.grossMargin === null) return 'text-gray-400';
+        if (this.grossMargin < 30) return 'text-red-600';
+        if (this.grossMargin <= 50) return 'text-orange-500';
+        return 'text-green-600';
+    },
+
+    get marginBg() {
+        if (this.grossMargin === null) return 'bg-gray-50 border-gray-100';
+        if (this.grossMargin < 30) return 'bg-red-50 border-red-100';
+        if (this.grossMargin <= 50) return 'bg-orange-50 border-orange-100';
+        return 'bg-green-50 border-green-100';
+    },
+
+    ingredientCost(index) {
+        const ing = this.product.ingredients[index];
+        if (!ing) return 0;
+        const rm = this.rawMaterials.find(m => String(m.id) === String(ing.id));
+        const cost = rm ? parseFloat(rm.cost_per_unit || 0) : 0;
+        const qty = parseFloat(ing.quantity || 0);
+        return qty * cost;
+    },
+
+    formatRupiah(val) {
+        return new Intl.NumberFormat('id-ID').format(Math.round(val));
+    },
     
     openAddModal() {
         this.editing = false;
@@ -164,6 +207,7 @@
                         <th class="px-4 md:px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Product Info</th>
                         <th class="px-4 md:px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Category</th>
                         <th class="px-4 md:px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Pricing</th>
+                        <th class="px-4 md:px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Margin</th>
                         <th class="px-4 md:px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Stock</th>
                         <th class="px-4 md:px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Status</th>
                         <th class="px-4 md:px-8 py-5 text-right text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
@@ -198,7 +242,24 @@
                         </td>
                         <td class="px-4 md:px-8 py-5 font-bold whitespace-nowrap">
                             <div class="text-[14px] text-gray-900 leading-tight">Rp {{ number_format($prod->selling_price, 0, ',', '.') }}</div>
-                            <div class="text-[11px] text-gray-400 mt-1 uppercase">Cost: Rp {{ number_format($prod->cost_price, 0, ',', '.') }}</div>
+                            <div class="text-[11px] text-gray-400 mt-1 uppercase">HPP: Rp {{ number_format($prod->calculateHpp(), 0, ',', '.') }}</div>
+                        </td>
+                        <td class="px-4 md:px-8 py-5 whitespace-nowrap">
+                            @php
+                                $margin = $prod->gross_margin;
+                                if ($margin === null) {
+                                    $marginClass = 'bg-gray-50 text-gray-400 border-gray-100';
+                                } elseif ($margin < 30) {
+                                    $marginClass = 'bg-red-50 text-red-600 border-red-100';
+                                } elseif ($margin <= 50) {
+                                    $marginClass = 'bg-orange-50 text-orange-600 border-orange-100';
+                                } else {
+                                    $marginClass = 'bg-green-50 text-green-600 border-green-100';
+                                }
+                            @endphp
+                            <span class="inline-flex px-3 py-1 text-[11px] font-black rounded-lg border {{ $marginClass }} uppercase">
+                                {{ $margin !== null ? $margin . '%' : 'N/A' }}
+                            </span>
                         </td>
                         <td class="px-4 md:px-8 py-5 whitespace-nowrap">
                             @php
@@ -236,7 +297,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-8 py-20 text-center text-gray-500">
+                        <td colspan="7" class="px-8 py-20 text-center text-gray-500">
                             <div class="flex flex-col items-center">
                                 <div class="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                                     <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,14 +438,19 @@
                                 <!-- Pricing & Stock -->
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Cost Price</label>
+                                        <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Cost Price (HPP)</label>
                                         <div class="relative">
                                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                                 <span class="text-gray-400 font-black text-[11px]">Rp</span>
                                             </div>
                                             <input type="number" name="cost_price" x-model="product.cost_price" required
-                                                class="block w-full pl-10 pr-4 py-3 border-gray-200 rounded-2xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue text-sm transition-all bg-gray-50/30 shadow-sm">
+                                                :readonly="product.is_recipe_based"
+                                                :class="product.is_recipe_based ? 'bg-gray-100 cursor-not-allowed' : 'bg-gray-50/30'"
+                                                class="block w-full pl-10 pr-4 py-3 border-gray-200 rounded-2xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue text-sm transition-all shadow-sm">
                                         </div>
+                                        <template x-if="product.is_recipe_based">
+                                            <p class="mt-1 text-[10px] font-bold text-smash-blue uppercase tracking-widest">Auto-calculated from recipe</p>
+                                        </template>
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Selling Price</label>
@@ -418,11 +484,11 @@
                                         </div>
 
                                         <!-- Recipe Builder -->
-                                        <div x-show="product.is_recipe_based" x-transition class="space-y-3 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                                        <div x-show="product.is_recipe_based" x-transition x-effect="if (product.is_recipe_based && product.ingredients.length > 0) { product.cost_price = Math.round(totalHpp); }" class="space-y-3 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
                                             <h4 class="text-xs font-black text-smash-blue uppercase tracking-widest mb-4">Recipe Items</h4>
                                             
                                             <template x-for="(ingredient, index) in product.ingredients" :key="index">
-                                                <div class="flex items-center gap-3">
+                                                <div class="flex items-center gap-2">
                                                     <div class="flex-1">
                                                         <select :name="`ingredients[${index}][id]`" x-model="product.ingredients[index].id" :required="product.is_recipe_based"
                                                             class="appearance-none block w-full border-gray-200 rounded-xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue px-3 py-2 text-sm transition-all bg-gray-50/30 font-bold text-gray-600">
@@ -432,13 +498,16 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="w-24">
+                                                    <div class="w-20">
                                                         <input type="number" step="0.01" :name="`ingredients[${index}][quantity]`" x-model="product.ingredients[index].quantity" :required="product.is_recipe_based"
                                                             placeholder="Qty"
                                                             class="block w-full border-gray-200 rounded-xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue px-3 py-2 text-sm transition-all bg-gray-50/30">
                                                     </div>
-                                                    <button type="button" @click="product.ingredients.splice(index, 1)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    <div class="w-28 text-right">
+                                                        <span class="text-[11px] font-black text-gray-500" x-text="'Rp ' + formatRupiah(ingredientCost(index))"></span>
+                                                    </div>
+                                                    <button type="button" @click="product.ingredients.splice(index, 1)" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                     </button>
                                                 </div>
                                             </template>
@@ -447,6 +516,30 @@
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                                 Add Ingredient
                                             </button>
+
+                                            <!-- HPP Cost Breakdown Card -->
+                                            <template x-if="product.ingredients.length > 0">
+                                                <div class="mt-4 p-4 rounded-2xl border" :class="marginBg">
+                                                    <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                                        HPP Cost Breakdown
+                                                    </h5>
+                                                    <div class="space-y-2">
+                                                        <div class="flex items-center justify-between">
+                                                            <span class="text-[11px] font-bold text-gray-500 uppercase">Total HPP</span>
+                                                            <span class="text-sm font-black text-gray-900" x-text="'Rp ' + formatRupiah(totalHpp)"></span>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <span class="text-[11px] font-bold text-gray-500 uppercase">Selling Price</span>
+                                                            <span class="text-sm font-black text-gray-900" x-text="'Rp ' + formatRupiah(product.selling_price || 0)"></span>
+                                                        </div>
+                                                        <div class="pt-2 mt-2 border-t border-gray-200/50 flex items-center justify-between">
+                                                            <span class="text-[11px] font-black uppercase tracking-widest" :class="marginColor">Gross Margin</span>
+                                                            <span class="text-lg font-black" :class="marginColor" x-text="grossMargin !== null ? grossMargin + '%' : 'N/A'"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
                                 </div>
