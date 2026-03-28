@@ -109,6 +109,10 @@ class TransactionController extends Controller
                 'price' => $item->price,
                 'subtotal' => $item->subtotal,
                 'notes' => $item->notes,
+                'variations' => $item->variations->map(fn($var) => [
+                    'group' => $var->variation_name,
+                    'option' => $var->option_name
+                ]),
             ]),
         ]);
     }
@@ -152,6 +156,7 @@ class TransactionController extends Controller
             'cart.*.id' => 'required|exists:products,id',
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.notes' => 'nullable|string|max:255',
+            'cart.*.variations' => 'nullable|array',
             'apply_tax' => 'boolean',
             'discount_type' => 'nullable|in:percentage,nominal',
             'discount_value' => 'nullable|numeric|min:0',
@@ -177,10 +182,41 @@ class TransactionController extends Controller
             $subtotal = 0;
             $items = [];
 
+            // Custom Timestamp Handling
+            $timestamp = $request->filled('transaction_date') 
+                ? \Carbon\Carbon::parse($request->transaction_date) 
+                : now();
+
             // Calculate totals and validate stock first
             foreach ($request->cart as $item) {
                 $product = Product::with('rawMaterials')->lockForUpdate()->find($item['id']);
                 
+                // Calculate Variation Price Modifiers
+                $variationSubtotal = 0;
+                $selectedVariations = []; 
+                if (isset($item['variations']) && is_array($item['variations'])) {
+                    foreach ($item['variations'] as $groupId => $groupData) {
+                        if (isset($groupData['selected']) && is_array($groupData['selected'])) {
+                            foreach ($groupData['selected'] as $optionId) {
+                                $option = \App\Models\VariationOption::find($optionId);
+                                if ($option) {
+                                    $variationSubtotal += $option->price_modifier;
+                                    $group = \App\Models\VariationGroup::find($groupId);
+                                    
+                                    $selectedVariations[] = [
+                                        'variation_option_id' => $optionId,
+                                        'variation_name' => $group ? $group->name : '',
+                                        'option_name' => $option->short_name ?: $option->name,
+                                        'price_modifier' => $option->price_modifier,
+                                        'created_at' => $timestamp,
+                                        'updated_at' => $timestamp,
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
                     // Check each raw material has enough stock
                     foreach ($product->rawMaterials as $ingredient) {
@@ -203,16 +239,18 @@ class TransactionController extends Controller
                     }
                 }
 
-                $itemSubtotal = $product->selling_price * $item['quantity'];
+                $finalPrice = $product->selling_price + $variationSubtotal;
+                $itemSubtotal = $finalPrice * $item['quantity'];
                 $subtotal += $itemSubtotal;
 
                 $items[] = [
                     'product_id' => $product->id,
-                    'price' => $product->selling_price,
+                    'price' => $finalPrice,
                     'quantity' => $item['quantity'],
                     'subtotal' => $itemSubtotal,
                     'notes' => $item['notes'] ?? null,
-                    'product_model' => $product // keep reference for stock deduction
+                    'product_model' => $product,
+                    'variations' => $selectedVariations
                 ];
             }
 
@@ -266,11 +304,6 @@ class TransactionController extends Controller
             $taxAmount = $request->boolean('apply_tax') ? $netSales * 0.10 : 0;
             $totalAmount = $netSales + $taxAmount;
 
-            // Custom Timestamp Handling
-            $timestamp = $request->filled('transaction_date') 
-                ? \Carbon\Carbon::parse($request->transaction_date) 
-                : now();
-
             // 1. Create Transaction
             $transaction = new Transaction([
                 'invoice_number' => Transaction::generateInvoiceNumber(),
@@ -309,6 +342,15 @@ class TransactionController extends Controller
                 $tItem->updated_at = $timestamp;
                 $tItem->save();
 
+                if (!empty($itemData['variations'])) {
+                    $varsToInsert = array_map(function($var) use ($tItem) {
+                        $var['transaction_item_id'] = $tItem->id;
+                        return $var;
+                    }, $itemData['variations']);
+                    
+                    \App\Models\TransactionItemVariation::insert($varsToInsert);
+                }
+
                 // Deduct stock
                 if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
                     foreach ($product->rawMaterials as $ingredient) {
@@ -343,8 +385,44 @@ class TransactionController extends Controller
      */
     public function showReceipt(Transaction $transaction)
     {
-        $transaction->load(['transactionItems.product', 'user']);
+        $transaction->load(['items.product', 'items.variations', 'user']);
         return view('pos.receipt', compact('transaction'));
+    }
+
+    /**
+     * Return receipt data directly as JSON for client-side direct printing (ESC/POS).
+     */
+    public function receiptData(Transaction $transaction)
+    {
+        $transaction->load(['items.product', 'user', 'voucher']);
+
+        return response()->json([
+            'id' => $transaction->id,
+            'invoice_number' => $transaction->invoice_number,
+            'created_at' => $transaction->created_at->format('d/m/Y H:i'),
+            'cashier' => $transaction->user->name ?? 'N/A',
+            'subtotal' => $transaction->subtotal,
+            'discount_amount' => $transaction->discount_amount,
+            'voucher_code' => $transaction->voucher->code ?? null,
+            'voucher_discount_amount' => $transaction->voucher_discount_amount,
+            'tax_amount' => $transaction->tax_amount,
+            'total_amount' => $transaction->total_amount,
+            'payment_method' => $transaction->payment_method,
+            'items' => $transaction->items->map(function ($item) {
+                return [
+                    'product_name' => $item->product->name ?? 'Deleted Product',
+                    'quantity' => $item->quantity,
+                    'price' => $item->price,
+                    'subtotal' => $item->subtotal,
+                    'notes' => $item->notes,
+                    'variations' => $item->variations->map(fn($var) => [
+                        'group' => $var->variation_name,
+                        'option' => $var->option_name,
+                        'price_modifier' => $var->price_modifier
+                    ])->toArray(),
+                ];
+            })
+        ]);
     }
 
     /**

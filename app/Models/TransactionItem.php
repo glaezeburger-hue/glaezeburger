@@ -27,4 +27,12 @@ class TransactionItem extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    /**
+     * Get the historical variations selected for this transaction item.
+     */
+    public function variations()
+    {
+        return $this->hasMany(TransactionItemVariation::class);
+    }
 }

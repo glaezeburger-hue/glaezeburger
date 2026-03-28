@@ -394,11 +394,11 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
                                 </button>
-                                <a href="{{ route('transactions.receipt', $txn) }}" target="_blank" class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-transparent hover:border-green-100" title="Print Receipt">
+                                <button @click.prevent="$dispatch('print-receipt', {{ $txn->id }})" class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-transparent hover:border-green-100" title="Bluetooth Print">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                                     </svg>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -512,7 +512,17 @@
                                                     <tr>
                                                         <td class="px-4 py-3">
                                                             <p class="text-xs font-bold text-gray-900 uppercase" x-text="item.product_name"></p>
-                                                            <p x-show="item.notes" class="text-[10px] font-bold text-gray-400 mt-0.5 italic normal-case" x-text="item.notes"></p>
+                                                            
+                                                            <!-- Variations Display -->
+                                                            <template x-if="item.variations && item.variations.length > 0">
+                                                                <div class="mt-1 flex flex-col gap-0.5">
+                                                                    <template x-for="v in item.variations">
+                                                                        <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest bg-gray-100 rounded px-1.5 py-0.5 inline-block w-fit" x-text="'+ ' + v.option"></span>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+
+                                                            <p x-show="item.notes" class="text-[10px] font-bold text-gray-400 mt-0.5 italic normal-case" x-text="'* ' + item.notes"></p>
                                                         </td>
                                                         <td class="px-4 py-3 text-center text-xs font-black text-gray-700" x-text="item.quantity"></td>
                                                         <td class="px-4 py-3 text-right text-xs font-bold text-gray-600" x-text="formatPrice(item.price)"></td>
@@ -566,13 +576,13 @@
                     <!-- Footer -->
                     <template x-if="detail">
                         <div class="px-8 py-5 border-t border-gray-100 bg-gray-50/50">
-                            <a :href="`{{ url('/transactions') }}/${detail.id}/receipt`" target="_blank"
+                            <button @click="$dispatch('print-receipt', detail.id)"
                                 class="w-full flex items-center justify-center px-6 py-3.5 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-all active:scale-95">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                                 </svg>
-                                Print Receipt
-                            </a>
+                                Print Bluetooth Receipt
+                            </button>
                         </div>
                     </template>
                 </div>

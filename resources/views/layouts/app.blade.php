@@ -84,5 +84,9 @@
     </div>
 
     @yield('scripts')
+    
+    <!-- Global Feature Loaders -->
+    @include('partials.global-printer')
+    
 </body>
 </html>

@@ -23,7 +23,13 @@ class PosController extends Controller
         }
 
         $categories = Category::orderBy('name')->get();
-        $products = Product::with(['category', 'rawMaterials'])->where('is_active', true)->latest()->get();
+        $products = Product::with([
+            'category', 
+            'rawMaterials', 
+            'variationGroups.options' => function($q) {
+                $q->where('is_active', true);
+            }
+        ])->where('is_active', true)->latest()->get();
         $rawMaterials = \App\Models\RawMaterial::all();
 
         return view('pos.index', compact('categories', 'products', 'activeShift', 'rawMaterials'));
@@ -52,5 +58,25 @@ class PosController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Return fresh product & raw material data as JSON (for soft-reset without page reload).
+     */
+    public function refreshStock()
+    {
+        $products = Product::with([
+            'category', 
+            'rawMaterials', 
+            'variationGroups.options' => function($q) {
+                $q->where('is_active', true);
+            }
+        ])->where('is_active', true)->latest()->get();
+        $rawMaterials = \App\Models\RawMaterial::all();
+
+        return response()->json([
+            'products' => $products,
+            'rawMaterials' => $rawMaterials,
+        ]);
     }
 }

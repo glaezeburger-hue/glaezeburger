@@ -16,7 +16,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'rawMaterials']);
+        $query = Product::with(['category', 'rawMaterials', 'variationGroups']);
 
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%')
@@ -30,8 +30,9 @@ class ProductController extends Controller
         $products = $query->latest()->paginate(10)->withQueryString();
         $categories = Category::orderBy('name')->get();
         $rawMaterials = RawMaterial::orderBy('name')->get(['id', 'name', 'unit', 'cost_per_unit']);
+        $variationGroups = \App\Models\VariationGroup::with('options')->get();
 
-        return view('products.index', compact('products', 'categories', 'rawMaterials'));
+        return view('products.index', compact('products', 'categories', 'rawMaterials', 'variationGroups'));
     }
 
     /**
@@ -53,6 +54,8 @@ class ProductController extends Controller
             'ingredients' => 'nullable|array',
             'ingredients.*.id' => 'required_with:ingredients|exists:raw_materials,id',
             'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0',
+            'variation_groups' => 'nullable|array',
+            'variation_groups.*' => 'exists:variation_groups,id',
         ]);
 
         if ($request->hasFile('image')) {
@@ -81,6 +84,14 @@ class ProductController extends Controller
             // Auto-update cost_price from calculated HPP
             $product->load('rawMaterials');
             $product->update(['cost_price' => $product->calculateHpp()]);
+        }
+
+        if ($request->has('variation_groups')) {
+            $syncData = [];
+            foreach ($request->variation_groups as $index => $groupId) {
+                $syncData[$groupId] = ['sort_order' => $index];
+            }
+            $product->variationGroups()->sync($syncData);
         }
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
@@ -115,6 +126,8 @@ class ProductController extends Controller
                 'ingredients' => 'nullable|array',
                 'ingredients.*.id' => 'required_with:ingredients|exists:raw_materials,id',
                 'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0',
+                'variation_groups' => 'nullable|array',
+                'variation_groups.*' => 'exists:variation_groups,id',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             dd($e->errors(), $request->all());
@@ -153,6 +166,16 @@ class ProductController extends Controller
         } else {
             // Un-sync if it's no longer recipe-based
             $product->rawMaterials()->sync([]);
+        }
+
+        if ($request->has('variation_groups')) {
+            $syncData = [];
+            foreach ($request->variation_groups as $index => $groupId) {
+                $syncData[$groupId] = ['sort_order' => $index];
+            }
+            $product->variationGroups()->sync($syncData);
+        } else {
+            $product->variationGroups()->sync([]);
         }
 
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');

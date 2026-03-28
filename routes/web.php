@@ -13,6 +13,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\KdsController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\VariationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,7 +57,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('categories', CategoryController::class)->only(['index', 'store']);
         
         // Raw Materials
-        Route::resource('raw-materials', RawMaterialController::class)->except(['show']);
+        Route::resource('raw-materials', RawMaterialController::class)->except(['create', 'edit', 'show']);
+
+        // Variations
+        Route::resource('variations', VariationController::class)->except(['create', 'edit', 'show']);
         
         // Vouchers
         Route::resource('vouchers', VoucherController::class)->except(['show']);
@@ -97,8 +101,10 @@ Route::middleware('auth')->group(function () {
         Route::get('pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('pos/checkout', [TransactionController::class, 'store'])->name('pos.checkout');
         Route::post('pos/qris/generate', [PosController::class, 'generateQris'])->name('pos.qris.generate');
+        Route::get('pos/refresh-stock', [PosController::class, 'refreshStock'])->name('pos.refresh-stock');
         Route::post('pos/vouchers/apply', [\App\Http\Controllers\VoucherController::class, 'validateVoucher'])->name('pos.vouchers.apply');
         Route::get('transactions/{transaction}/receipt', [TransactionController::class, 'showReceipt'])->name('transactions.receipt');
+        Route::get('transactions/{transaction}/receipt-data', [TransactionController::class, 'receiptData'])->name('transactions.receipt-data');
         Route::patch('transactions/{transaction}/payment', [TransactionController::class, 'confirmPayment'])->name('transactions.payment.confirm');
 
         // Cash Register / Shift Management

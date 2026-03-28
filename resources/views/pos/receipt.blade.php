@@ -80,10 +80,22 @@
             <th class="text-center">@</th>
             <th class="text-right">Subtotal</th>
         </tr>
-        @foreach($transaction->transactionItems as $item)
+        @foreach($transaction->items as $item)
         <tr>
-            <td colspan="3" class="bold pb-0">{{ $item->product->name }}</td>
+            <td colspan="3" class="bold pb-0">{{ $item->product->name ?? 'Deleted Product' }}</td>
         </tr>
+        @if($item->variations && $item->variations->count() > 0)
+            @foreach($item->variations as $var)
+            <tr>
+                <td colspan="3" class="pb-0" style="font-size: 10px; color: #333;">
+                    + {{ $var->option_name }}
+                    @if($var->price_modifier > 0)
+                        (+{{ number_format($var->price_modifier, 0, ',', '.') }})
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        @endif
         @if($item->notes)
         <tr>
             <td colspan="3" class="pb-0" style="font-size: 10px; font-style: italic; color: #555;">* {{ $item->notes }}</td>

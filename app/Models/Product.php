@@ -140,4 +140,15 @@ class Product extends Model
 
         return round((($this->selling_price - $hpp) / $this->selling_price) * 100, 1);
     }
+
+    /**
+     * Relationship: A product can have many variation groups.
+     */
+    public function variationGroups()
+    {
+        return $this->belongsToMany(VariationGroup::class, 'product_variation_group')
+                    ->withPivot('sort_order')
+                    ->orderByPivot('sort_order', 'asc')
+                    ->withTimestamps();
+    }
 }

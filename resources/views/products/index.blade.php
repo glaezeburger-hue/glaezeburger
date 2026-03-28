@@ -21,11 +21,13 @@
         description: @js(old('description', '')),
         is_active: @js(old('is_active', '1') == '1'),
         is_recipe_based: @js(old('is_recipe_based', '') == '1'),
-        ingredients: @js(old('ingredients', []))
+        ingredients: @js(old('ingredients', [])),
+        variation_groups: @js(old('variation_groups', []))
     },
     imagePreview: null,
     categories: @js($categories),
     rawMaterials: @js($rawMaterials ?? []),
+    variationGroupsList: @js($variationGroups ?? []),
 
     get totalHpp() {
         if (!this.product.is_recipe_based || !this.product.ingredients.length) return 0;
@@ -73,7 +75,7 @@
     openAddModal() {
         this.editing = false;
         this.formAction = '{{ route('products.store') }}';
-        this.product = { id: '', name: '', category_id: '', sku: '', cost_price: '', selling_price: '', stock: '', description: '', is_active: true, is_recipe_based: false, ingredients: [] };
+        this.product = { id: '', name: '', category_id: '', sku: '', cost_price: '', selling_price: '', stock: '', description: '', is_active: true, is_recipe_based: false, ingredients: [], variation_groups: [] };
         this.imagePreview = null;
         this.showModal = true;
     },
@@ -87,7 +89,8 @@
             ingredients: item.raw_materials ? item.raw_materials.map(rm => ({
                 id: String(rm.id),
                 quantity: rm.pivot.quantity
-            })) : []
+            })) : [],
+            variation_groups: item.variation_groups ? item.variation_groups.map(vg => String(vg.id)) : []
         };
         this.imagePreview = item.image_path ? `/storage/${item.image_path}` : null;
         this.showModal = true;
@@ -558,6 +561,27 @@
                                         <label for="toggle-active" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-200 cursor-pointer transition-colors duration-300"
                                             :class="{'bg-smash-blue/40': product.is_active, 'bg-gray-200': !product.is_active}"></label>
                                     </div>
+                                </div>
+
+                                <!-- Variation Groups -->
+                                <div class="space-y-4">
+                                    <h3 class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-100 pb-2">Variasi Produk (Opsional)</h3>
+                                    <div class="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto pr-2">
+                                        <template x-for="vg in variationGroupsList" :key="vg.id">
+                                            <label class="flex items-center p-3 bg-white border border-gray-100 rounded-2xl cursor-pointer hover:border-smash-blue/30 transition-all shadow-sm group">
+                                                <input type="checkbox" name="variation_groups[]" :value="vg.id" x-model="product.variation_groups"
+                                                    class="w-5 h-5 rounded-md border-2 border-gray-200 text-smash-blue focus:ring-smash-blue focus:ring-offset-0 transition-colors cursor-pointer">
+                                                <div class="ml-3 flex-1">
+                                                    <span class="text-[12px] font-black text-gray-900 leading-none group-hover:text-smash-blue transition-colors" x-text="vg.name"></span>
+                                                    <span class="text-[10px] font-bold text-gray-400 block mt-0.5"><span x-text="vg.options.length"></span> Opsi &bull; <span x-text="vg.type === 'single' ? 'Pilih 1 (Radio)' : 'Pilih Banyak (Checkbox)'"></span></span>
+                                                </div>
+                                            </label>
+                                        </template>
+                                        <template x-if="variationGroupsList.length === 0">
+                                            <p class="text-[11px] font-bold text-gray-400 italic">Belum ada grup variasi yang dibuat.</p>
+                                        </template>
+                                    </div>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">Centang variasi yang akan aktif untuk produk ini di halaman POS Kasir.</p>
                                 </div>
                             </div>
 
