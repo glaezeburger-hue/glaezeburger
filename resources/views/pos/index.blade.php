@@ -11,8 +11,26 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.6.1/dist/easy.qrcode.min.js"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0A56C8">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
+
     <style>
         [x-cloak] { display: none !important; }
+        
+        html, body { 
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overscroll-behavior-y: contain;
+        }
+
+        /* Essential for Safari/Chrome on Tablet to respect flex-1 scrolling */
+        .flex-1 { min-height: 0; }
     </style>
 </head>
 <body class="bg-[#F8FAFC] font-sans antialiased overflow-hidden">
@@ -69,9 +87,27 @@
                 savedLogo: localStorage.getItem('printerLogoDataUrl') || null,
                 isPrintingReceipt: false,
                 printProgress: 0,
+                isFullscreen: false,
+                wakeLock: null,
 
                 init() {
                     this.filterProducts();
+                    
+                    // Sync fullscreen state reactively
+                    document.addEventListener('fullscreenchange', () => {
+                        this.isFullscreen = !!document.fullscreenElement;
+                        if (!this.isFullscreen) {
+                            this.releaseWakeLock();
+                        }
+                    });
+
+                    // Re-acquire Wake Lock when tab regains visibility
+                    document.addEventListener('visibilitychange', async () => {
+                        if (document.visibilityState === 'visible' && this.isFullscreen) {
+                            await this.requestWakeLock();
+                        }
+                    });
+
                     // Setup watcher to auto-fill cash when QRIS is selected
                     this.$watch('paymentMethod', method => {
                         if (method === 'QRIS') {
@@ -529,7 +565,7 @@
                                 this.qrisTotalAmount = data.data.total_amount;
                                 
                                 this.showCheckout = false;
-                                this.openQrisPayment(data.data.total_amount);
+                                await this.openQrisPayment(data.data.total_amount);
                             } else {
                                 this.playSuccessSound();
 
@@ -707,6 +743,7 @@
                 },
                 
                 async printReceipt(transactionId, extraData = {}) {
+                    if (this.isPrintingReceipt) return;
                     // 1. Try Bluetooth Direct Print first
                     if (this.printerConnected && this.printer) {
                         try {
@@ -962,50 +999,94 @@
                     this.playTone(400, 'sine', 0.1);
                     setTimeout(() => this.playTone(600, 'sine', 0.1), 100);
                     setTimeout(() => this.playTone(1000, 'sine', 0.3), 200);
+                },
+
+                async toggleFullscreen() {
+                    try {
+                        if (!document.fullscreenElement) {
+                            await document.documentElement.requestFullscreen();
+                            this.isFullscreen = true;
+                            await this.requestWakeLock();
+                        } else {
+                            if (document.exitFullscreen) {
+                                await document.exitFullscreen();
+                            }
+                            this.isFullscreen = false;
+                            this.releaseWakeLock();
+                        }
+                    } catch (err) {
+                        console.error('Fullscreen toggle failed:', err);
+                    }
+                },
+
+                async requestWakeLock() {
+                    try {
+                        if ('wakeLock' in navigator) {
+                            this.wakeLock = await navigator.wakeLock.request('screen');
+                            console.log('[WakeLock] Screen is locked ON');
+                        }
+                    } catch (err) {
+                        console.warn('[WakeLock] Request failed:', err.message);
+                    }
+                },
+
+                releaseWakeLock() {
+                    if (this.wakeLock) {
+                        this.wakeLock.release();
+                        this.wakeLock = null;
+                        console.log('[WakeLock] Screen lock released');
+                    }
                 }
             };
         }
     </script>
-    <div x-data="posApp()" class="h-screen flex flex-col md:flex-row overflow-hidden relative">
+    <div x-data="posApp()" class="fixed inset-0 min-h-screen h-screen h-[100dvh] flex flex-col md:flex-row overflow-hidden relative">
         
         <!-- Left Panel: Product Area (70%) -->
-        <div class="flex-1 flex flex-col h-full bg-white border-r border-gray-100 overflow-hidden">
+        <div class="flex-1 flex flex-col min-h-0 h-full bg-white border-r border-gray-100 overflow-hidden">
             <!-- POS Header -->
-            <header class="p-6 border-b border-gray-50 flex flex-col gap-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
+            <header class="px-4 py-4 md:px-6 md:py-6 border-b border-gray-50">
+                <div class="flex flex-wrap items-center justify-between gap-5">
+                    <div class="flex items-center space-x-3 md:space-x-4 shrink-0">
                         <button @click="sidebarOpen = true" class="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:text-smash-blue hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
                         </button>
                         <div>
-                            <h1 class="text-2xl font-black text-gray-900 tracking-tighter uppercase leading-none">CASHIER</h1>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">GLÆZE BURGER POS SYSTEM</p>
+                            <h1 class="text-xl md:text-2xl font-black text-gray-900 tracking-tighter uppercase leading-none">CASHIER</h1>
+                            <p class="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">GLÆZE BURGER POS</p>
                         </div>
                     </div>
-                    <div class="relative w-72 group">
+                    <div class="relative w-full sm:w-auto sm:flex-1 lg:flex-none lg:w-72 group order-3 sm:order-2">
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <svg class="h-5 w-5 text-gray-300 group-focus-within:text-smash-blue transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </span>
                         <input type="text" x-model="searchQuery" @input="filterProducts()"
-                            class="block w-full pl-11 pr-4 py-3 border border-gray-100 rounded-2xl bg-gray-50/50 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue sm:text-sm transition-all shadow-inner" 
+                            class="block w-full pl-11 pr-4 py-2.5 md:py-3 border border-gray-100 rounded-2xl bg-gray-50/50 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue sm:text-sm transition-all shadow-inner" 
                             placeholder="Find products by name or SKU...">
                     </div>
 
                     <!-- Shift Controls & Printer Dropdown in Header -->
-                    <div class="flex items-center space-x-3">
-                        <!-- Auto-Reconnect Reminder Prompt -->
-                        <template x-if="lastPrinterName && !printerConnected">
-                            <button @click="autoConnectPrinter()" 
-                                :disabled="printerConnecting"
-                                class="px-4 py-2 bg-yellow-400 text-yellow-900 border border-yellow-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-500 transition-all flex items-center gap-2 shadow-sm animate-pulse disabled:opacity-50 disabled:animate-none">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                <span>Re-connect to <span x-text="lastPrinterName"></span>?</span>
-                            </button>
-                        </template>
+                    <div class="flex items-center space-x-2 md:space-x-3 shrink-0 order-2 sm:order-3">
+                        
+                        <!-- Fullscreen Toggle -->
+                        <button @click="toggleFullscreen()" 
+                            class="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:text-smash-blue hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100 flex items-center justify-center group"
+                            :title="isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'">
+                            <template x-if="!isFullscreen">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                                </svg>
+                            </template>
+                            <template x-if="isFullscreen">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4l5 5m0-5v4m0 0H5m14-4l-5 5m0-5v4m0 0h4m-9 11l-5-5m5 5v-4m0 0H5m14 5l-5-5m5 5v-4m0 0h-4"></path>
+                                </svg>
+                            </template>
+                        </button>
 
                         <!-- Printer Indicator & Dropdown -->
                         <div class="relative" @click.away="printerDropdownOpen = false">
@@ -1145,9 +1226,12 @@
                         </a>
                     </div>
                 </div>
+            </header>
 
-                <!-- Category Chips -->
-                <div class="flex items-center space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+            <!-- Main Listing Area -->
+            <div class="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                <!-- Categories -->
+                <div class="px-6 py-4 md:py-5 flex items-center space-x-3 overflow-x-auto scrollbar-hide border-b border-gray-50 bg-white">
                     <button @click="setCategory('')"
                         :class="selectedCategory === '' ? 'bg-smash-blue text-white shadow-lg shadow-blue-200 border-smash-blue' : 'bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-smash-blue border-transparent'"
                         class="px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all whitespace-nowrap">
@@ -1161,10 +1245,9 @@
                         </button>
                     </template>
                 </div>
-            </header>
 
-            <!-- Product Grid -->
-            <div class="flex-1 overflow-y-auto p-8 bg-blue-50/10">
+                <!-- Product Grid -->
+                <div class="flex-1 min-h-0 overflow-y-auto p-6 md:p-8 bg-blue-50/10" style="-webkit-overflow-scrolling: touch;">
                 <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                     <template x-for="product in filteredProducts" :key="product.id">
                         <div @click="addToCart(product)" 
@@ -1211,11 +1294,12 @@
                     <p class="font-black text-gray-900 text-lg uppercase tracking-widest leading-none">No products matching</p>
                     <p class="text-sm font-bold text-gray-400 mt-2 uppercase tracking-tight">Try adjusting your filters or search keywords.</p>
                 </div>
+                </div>
             </div>
         </div>
 
         <!-- Variation Selection Modal -->
-        <div x-show="showVariationModal" class="fixed inset-0 z-[60] overflow-hidden flex items-center justify-center" style="display: none;">
+        <div x-show="showVariationModal" class="fixed inset-0 z-[9000] overflow-hidden flex items-center justify-center" style="display: none;">
             <!-- Backdrop -->
             <div x-show="showVariationModal" x-transition.opacity @click="showVariationModal = false" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
 
@@ -1320,8 +1404,9 @@
         <div x-cloak x-show="cartOpen" x-transition.opacity @click="cartOpen = false" class="md:hidden fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"></div>
 
         <!-- Right Panel: Cart & Checkout (30%) -->
-        <div :class="cartOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full md:translate-x-0'" 
-             class="fixed md:relative inset-y-0 right-0 z-50 w-full sm:w-96 md:w-[420px] bg-gray-50/50 flex flex-col h-full transition-transform duration-300 ease-in-out border-l border-gray-100">
+        <div x-show="!showCheckout && !showQrisModal" 
+             :class="cartOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full md:translate-x-0'" 
+             class="fixed md:relative inset-y-0 right-0 z-50 w-full sm:w-96 md:w-[420px] bg-gray-50/50 flex flex-col min-h-0 h-full transition-transform duration-300 ease-in-out border-l border-gray-100">
             <header class="p-5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
                 <div class="flex items-center space-x-3">
                     <button @click="cartOpen = false" class="md:hidden p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors">
@@ -1342,7 +1427,7 @@
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            <div class="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3" style="-webkit-overflow-scrolling: touch;">
                 <template x-for="(item, index) in cart" :key="item.id">
                     <div class="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-start space-x-3">
                         <div class="h-12 w-12 rounded-xl bg-gray-50 flex-shrink-0 overflow-hidden">
@@ -1488,7 +1573,7 @@
         </div>
 
         <!-- Checkout Slide-over Modal -->
-        <div x-show="showCheckout" class="fixed inset-0 overflow-hidden z-[100]" style="display: none;">
+        <div x-show="showCheckout" class="fixed inset-0 overflow-hidden z-[1000]" style="display: none;">
             <div class="absolute inset-0 overflow-hidden">
                 <div x-show="showCheckout" x-transition.opacity class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showCheckout = false"></div>
                 <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
@@ -1620,7 +1705,7 @@
         @include('partials.sidebar', ['isOverlay' => true])
 
         <!-- Discount Slide-over Modal -->
-        <div x-show="showDiscountModal" class="fixed inset-0 overflow-hidden z-[110]" style="display: none;" x-cloak>
+        <div x-show="showDiscountModal" class="fixed inset-0 overflow-hidden z-[9500]" style="display: none;" x-cloak>
             <div class="absolute inset-0 overflow-hidden">
                 <div x-show="showDiscountModal" x-transition.opacity class="absolute inset-0 bg-gray-900/30 backdrop-blur-sm" @click="showDiscountModal = false"></div>
                 <div class="fixed inset-y-0 right-0 max-w-sm w-full flex">
@@ -1663,7 +1748,7 @@
         </div>
 
         <!-- Fully Branded QRIS Modal (v5) -->
-        <div x-show="showQrisModal" class="fixed inset-0 flex items-center justify-center p-4 hidden md:flex" style="z-index: 100000; padding-right: 420px; display: none;" x-cloak>
+        <div x-show="showQrisModal" class="fixed inset-0 flex items-center justify-center p-4 z-[1100]" x-cloak>
             <!-- Heavy Backdrop for Focus -->
             <div x-show="showQrisModal" x-transition.opacity 
                 class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" 
@@ -1743,7 +1828,7 @@
         </div>
 
         <!-- Custom Safety Printer Modal -->
-        <div x-show="showPrinterSafetyModal" class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 120000; padding-right: 420px; display: none;" x-cloak>
+        <div x-show="showPrinterSafetyModal" class="fixed inset-0 flex items-center justify-center p-4 z-[1200]" x-cloak>
             <div x-show="showPrinterSafetyModal" x-transition.opacity class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showPrinterSafetyModal = false"></div>
             
             <div x-show="showPrinterSafetyModal" 
@@ -1789,7 +1874,7 @@
         </div>
 
         <!-- Printing Progress Overlay -->
-        <div x-show="isPrintingReceipt" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-opacity">
+        <div x-show="isPrintingReceipt" style="display: none;" class="fixed inset-0 z-[13000] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-opacity">
             <div class="bg-white rounded-2xl shadow-2xl w-80 p-6 flex flex-col items-center text-center transform scale-100 animate-in zoom-in-95 duration-200">
                 <div class="relative w-16 h-16 mb-4 flex items-center justify-center">
                     <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
@@ -1821,5 +1906,14 @@
 
     <!-- Web Bluetooth ESC/POS Service -->
     <script src="{{ asset('js/bluetooth-printer.js') }}"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        }
+    </script>
 </body>
 </html>

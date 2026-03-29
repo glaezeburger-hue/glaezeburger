@@ -4,17 +4,6 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto px-4 py-8" x-data="shiftApp()">
-    
-    <!-- Actions Header (Consistent with other pages) -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-
-        @if($activeShift)
-            <a href="{{ route('pos.index') }}" class="px-8 py-3.5 bg-smash-blue hover:bg-blue-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-[0_15px_35px_-5px_rgba(10,86,200,0.3)] transform hover:-translate-y-1 active:scale-95 flex items-center gap-2.5">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Buka Layar Kasir (POS)
-            </a>
-        @endif
-    </div>
 
     @if(!$activeShift)
         <!-- STATE: OPEN SHIFT -->
@@ -74,12 +63,9 @@
         </div>
     @else
         <!-- STATE: SHIFT MANAGEMENT (CLOSE SHIFT & PETTY CASH) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
-            <!-- Column 1: Summary -->
-            <div class="lg:col-span-2 space-y-8">
-                <!-- Main Summary Cards -->
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="flex flex-col gap-8 mb-10 pb-4">
+            <!-- Main Summary Cards (Full Width Layout) -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
                         <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Saldo Awal</p>
                         <p class="text-xl font-black text-gray-900">{{ number_format($activeShift->opening_balance, 0, ',', '.') }}</p>
@@ -108,22 +94,29 @@
                         <p class="text-xl font-black text-white">{{ number_format($summary['expected_balance'], 0, ',', '.') }}</p>
                     </div>
                 </div>
+            </div>
 
-                <!-- Denomination Calculator -->
-                <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-gray-50 flex items-center justify-between">
-                        <h4 class="font-black text-lg tracking-tighter uppercase italic">Kalkulator Uang Fisik</h4>
-                        <button @click="resetDenominations()" class="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-widest">Reset</button>
-                    </div>
-                    <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-4">
+            <!-- Bottom Content: Form & Calculator Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                
+                <!-- Column 1: Denomination Calculator -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden h-full">
+                        <div class="p-6 border-b border-gray-50 flex items-center justify-between">
+                            <h4 class="font-black text-lg tracking-tighter uppercase italic">Kalkulator Uang Fisik</h4>
+                            <button @click="resetDenominations()" class="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-widest px-3 py-1 bg-gray-50 rounded-lg transition-colors">Reset</button>
+                        </div>
+                    <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-12 lg:gap-x-16 gap-y-6 lg:gap-y-8">
                         <template x-for="(d, index) in denominations" :key="index">
-                            <div class="flex items-center justify-between group py-1 border-b border-gray-50/50 last:border-0 md:border-0">
-                                <span class="text-xs font-black text-gray-400 w-24" x-text="d.label"></span>
-                                <div class="flex items-center space-x-3">
-                                    <span class="text-[10px] font-black text-gray-300 tracking-widest">X</span>
-                                    <input type="number" x-model="d.qty" placeholder="0" class="w-20 px-3 py-2 bg-gray-50 border-gray-100 rounded-xl text-center font-black focus:ring-smash-blue/5 transition-all text-sm" />
+                            <div class="flex items-center gap-4 group py-3 border-b border-gray-50/50">
+                                <span class="text-xs font-black text-gray-400 w-20 shrink-0" x-text="d.label"></span>
+                                <div class="flex items-center space-x-2 shrink-0">
+                                    <span class="text-[10px] font-black text-gray-300 tracking-widest hidden sm:inline">X</span>
+                                    <input type="number" x-model="d.qty" placeholder="0" class="w-16 px-2 py-2.5 bg-gray-50 border-gray-100 rounded-xl text-center font-black focus:ring-smash-blue/5 transition-all text-sm" />
                                 </div>
-                                <span class="text-xs font-black text-gray-700 min-w-[100px] text-right" x-text="formatRupiah(d.value * (parseInt(d.qty) || 0))"></span>
+                                <div class="flex-1 text-right">
+                                    <span class="text-xs font-black text-gray-700 shadow-sm px-4 py-2 bg-gray-50/50 rounded-lg whitespace-nowrap" x-text="formatRupiah(d.value * (parseInt(d.qty) || 0))"></span>
+                                </div>
                             </div>
                         </template>
                     </div>
@@ -153,11 +146,11 @@
                         </button>
                     </div>
                 </div>
-            </div>
+                </div>
 
-            <!-- Column 2: Forms -->
-            <div class="space-y-8">
-                <!-- Petty Cash Form -->
+                <!-- Column 2: Kas Management Forms -->
+                <div class="space-y-8">
+                    <!-- Petty Cash Form -->
                 <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8 space-y-6">
                     <h4 class="font-black text-lg tracking-tighter uppercase italic">Kas Keluar / Masuk</h4>
                     

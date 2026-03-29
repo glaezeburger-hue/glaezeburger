@@ -27,6 +27,24 @@
             alert('Minimal harus ada 1 opsi variasi.');
         }
     },
+    setDefault(index) {
+        if (this.group.type === 'single' && this.group.options[index].is_default) {
+            this.group.options.forEach((opt, i) => {
+                if (i !== index) opt.is_default = false;
+            });
+        }
+    },
+    handleTypeChange() {
+        if (this.group.type === 'single') {
+            let foundDefault = false;
+            this.group.options.forEach(opt => {
+                if (opt.is_default) {
+                    if (foundDefault) opt.is_default = false;
+                    else foundDefault = true;
+                }
+            });
+        }
+    },
     openAddModal() {
         this.editing = false;
         this.formAction = this.defaultEndpoint;
@@ -229,7 +247,7 @@
                                         <div>
                                             <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Tipe Pilihan</label>
                                             <div class="relative">
-                                                <select name="type" x-model="group.type" required
+                                                <select name="type" x-model="group.type" @change="handleTypeChange()" required
                                                     class="appearance-none block w-full border-gray-200 rounded-2xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue px-4 py-3 text-sm transition-all bg-white shadow-sm font-bold text-gray-700">
                                                     <option value="single">Single (Radio)</option>
                                                     <option value="multiple">Multiple (Checkbox)</option>
@@ -243,12 +261,16 @@
                                             <p class="mt-2 text-[10px] font-medium text-gray-400">Pilih 1 vs Pilih Banyak.</p>
                                         </div>
 
-                                        <div class="flex flex-col justify-start pt-2">
-                                            <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3">Wajib Diisi?</label>
+                                        <div class="flex items-center pt-6">
                                             <label class="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" name="is_required" value="1" x-model="group.is_required" class="sr-only peer">
-                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-                                                <span class="ml-3 text-[12px] font-black tracking-widest uppercase text-gray-500 peer-checked:text-red-600 transition-colors">Required di POS</span>
+                                                <input type="checkbox" name="is_required" value="1" x-model="group.is_required" class="sr-only">
+                                                <div class="w-11 h-6 rounded-full transition-all duration-300 relative border-2 border-transparent"
+                                                     :class="group.is_required ? 'bg-red-500' : 'bg-gray-200'">
+                                                    <div class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-4 w-4 transition-all duration-300"
+                                                         :class="group.is_required ? 'translate-x-5 border-white' : 'translate-x-0'"></div>
+                                                </div>
+                                                <span class="ml-3 text-[12px] font-black tracking-widest uppercase transition-colors"
+                                                      :class="group.is_required ? 'text-red-500' : 'text-gray-500'">Required di POS</span>
                                             </label>
                                         </div>
                                     </div>
@@ -304,9 +326,9 @@
                                                     <div class="flex flex-col items-center justify-center pl-2">
                                                         <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Set Default</label>
                                                         <label class="flex items-center cursor-pointer">
-                                                            <input type="checkbox" :name="'options['+index+'][is_default]'" value="1" x-model="opt.is_default" class="sr-only peer">
-                                                            <div class="w-5 h-5 rounded border-2 border-gray-200 peer-checked:bg-smash-blue peer-checked:border-smash-blue flex items-center justify-center transition-colors">
-                                                                <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                                            <input type="checkbox" :name="'options['+index+'][is_default]'" value="1" x-model="opt.is_default" @change="setDefault(index)" class="sr-only peer">
+                                                            <div class="w-5 h-5 rounded border-2 border-gray-200 peer-checked:bg-smash-blue peer-checked:border-smash-blue flex items-center justify-center transition-colors relative">
+                                                                <svg x-show="opt.is_default" class="w-3 h-3 text-white absolute" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                                             </div>
                                                         </label>
                                                     </div>

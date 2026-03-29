@@ -184,17 +184,19 @@ class BluetoothPrinter {
 
     formatLine(left, right) {
         const LINE_WIDTH = 32;
-        // Ensure strings
-        left = String(left);
-        right = String(right);
+        // Ensure strings and sanitize
+        left = String(left || '');
+        right = String(right || '');
 
-        // If even without space it exceeds, we might need to truncate left
+        // Truncate left if combined length exceeds width
+        // We need at least one space in between
         if (left.length + right.length >= LINE_WIDTH) {
             left = left.substring(0, LINE_WIDTH - right.length - 1);
         }
 
-        const spaceLength = LINE_WIDTH - left.length - right.length;
-        return left + ' '.repeat(Math.max(1, spaceLength)) + right;
+        const spaceCount = LINE_WIDTH - left.length - right.length;
+        // Strict 32 character line
+        return left + ' '.repeat(Math.max(1, spaceCount)) + right;
     }
 
     /**
@@ -287,83 +289,77 @@ class BluetoothPrinter {
             const add = (bytes) => {
                 if (typeof bytes === 'string') {
                     receipt.push(...encoder.encode(bytes));
-                } else {
+                } else if (Array.isArray(bytes) || bytes instanceof Uint8Array) {
                     receipt.push(...bytes);
+                } else if (typeof bytes === 'number') {
+                    receipt.push(bytes);
                 }
             };
 
             // ESC/POS Commands
             const ESC = 0x1B;
             const GS = 0x1D;
-            const INIT = [ESC, 0x40];
+            const INIT = [ESC, 0x40]; // ESC @ (Reset/Initialize)
             const ALIGN_LEFT = [ESC, 0x61, 0x00];
             const ALIGN_CENTER = [ESC, 0x61, 0x01];
             const BOLD_ON = [ESC, 0x45, 1];
             const BOLD_OFF = [ESC, 0x45, 0];
-            const DOUBLE_H = [GS, 0x21, 0x01];  // Double height only
-            const DOUBLE_W = [GS, 0x21, 0x10];  // Double width only (16 chars/line)
-            const DOUBLE_HW = [GS, 0x21, 0x11]; // Double height & width (16 chars/line)
+            const DOUBLE_H = [GS, 0x21, 0x01];
+            const DOUBLE_W = [GS, 0x21, 0x10];
+            const DOUBLE_HW = [GS, 0x21, 0x11];
             const NORMAL_SIZE = [GS, 0x21, 0x00];
-            const UNDERLINE_ON = [ESC, 0x2D, 1];
-            const UNDERLINE_OFF = [ESC, 0x2D, 0];
 
-            // Separator styles
-            const LINE_DASH = "--------------------------------\n";  // 32 dashes
-            const LINE_EQUAL = "================================\n"; // 32 equals
-            const LINE_DOT = "................................\n";   // 32 dots
+            // Separator styles (Exactly 32 chars)
+            const LINE_DASH = "--------------------------------\n";
+            const LINE_EQUAL = "================================\n";
+            const LINE_DOT = "................................\n";
 
             // Format number helpers
             const fmtRp = (num) => {
-                return new Intl.NumberFormat('id-ID').format(Math.round(num));
+                return new Intl.NumberFormat('id-ID').format(Math.round(parseFloat(num || 0)));
             };
 
-            // ─── 1. INITIALIZE ───
+            // ─── 1. INITIALIZE (BUFFER FLUSHING) ───
             add(INIT);
             add(ALIGN_CENTER);
 
             // ─── 2. HEADER / BRAND LOGO ───
             if (data.logo_url) {
-                // Try to load and convert the image
-                const logoBytes = await this.imageToEscPos(data.logo_url, 200);
+                const logoBytes = await this.imageToEscPos(data.logo_url, 180); // Safer logo width
                 if (logoBytes && logoBytes.length > 0) {
                     add(logoBytes);
-                    add("Street Smash Burger\n");
-                    add("Centra Niaga Square\n");
-                    add("Cikarang Utara, Kab Bekasi\n");
+                    add("\n");
+                    add(BOLD_ON);
+                    add("STREET SMASH BURGER\n");
+                    add(BOLD_OFF);
                 }
             } else {
-                // Fallback Text Header if no logo URL provided or failed
                 add(BOLD_ON);
                 add(DOUBLE_HW);
                 add("GLAEZE\n");
                 add(NORMAL_SIZE);
-                add(DOUBLE_H);
-                add("BURGER\n");
-                add(NORMAL_SIZE);
                 add(BOLD_OFF);
-                add("\n");
                 add("Street Smash Burger\n");
-                add("Centra Niaga Square\n");
-                add("Cikarang Utara, Kab Bekasi\n");
             }
+            
+            add(NORMAL_SIZE);
+            add("Centra Niaga Square\n");
+            add("Cikarang Utara, Kab Bekasi\n");
             add(LINE_EQUAL);
 
             // ─── 3. TRANSACTION INFO ───
             add(ALIGN_LEFT);
-            // Extract short order number from invoice
-            const orderNum = data.invoice_number || '-';
-            add(this.formatLine("No.", orderNum) + "\n");
-            add(this.formatLine("Tanggal", data.created_at || '-') + "\n");
-            add(this.formatLine("Kasir", data.cashier || '-') + "\n");
-            add(this.formatLine("Bayar", (data.payment_method || 'Cash').toUpperCase()) + "\n");
+            add(this.formatLine("No.", data.invoice_number || '-') + "\n");
+            add(this.formatLine("Tgl", data.created_at || '-') + "\n");
+            add(this.formatLine("Kasir", (data.cashier || 'Kasir').substring(0, 20)) + "\n");
+            add(this.formatLine("Mode", (data.payment_method || 'Cash')) + "\n");
             add(LINE_DASH);
 
             // ─── 4. ORDER ITEMS ───
             if (data.items && data.items.length > 0) {
                 data.items.forEach(item => {
-                    let name = item.product_name || 'Item';
+                    let name = String(item.product_name || 'Item');
                     
-                    // Print item name (bold)
                     add(BOLD_ON);
                     if (name.length > 32) {
                         add(name.substring(0, 32) + "\n");
@@ -373,25 +369,17 @@ class BluetoothPrinter {
                     }
                     add(BOLD_OFF);
 
-                    // Print Variations if any
+                    // Variations
                     if (item.variations && item.variations.length > 0) {
                         item.variations.forEach(v => {
-                            let varLine = `  + ${v.option}`;
-                            if (v.price_modifier > 0) {
-                                let modStr = `+${fmtRp(v.price_modifier)}`;
-                                add(this.formatLine(varLine, modStr) + "\n");
-                            } else {
-                                add(varLine + "\n");
-                            }
+                            let optionText = `  + ${v.option}`;
+                            let priceText = v.price_modifier > 0 ? `+${fmtRp(v.price_modifier)}` : '';
+                            add(this.formatLine(optionText, priceText) + "\n");
                         });
                     }
 
-                    // Print notes if any
-                    if (item.notes) {
-                        add(`  * ${item.notes}\n`);
-                    }
+                    if (item.notes) add(`  * ${item.notes.substring(0, 28)}\n`);
 
-                    // Print qty x price = subtotal
                     const qtyPrice = `  ${item.quantity}x ${fmtRp(item.price)}`;
                     const subtotal = fmtRp(item.subtotal);
                     add(this.formatLine(qtyPrice, subtotal) + "\n");
@@ -408,11 +396,8 @@ class BluetoothPrinter {
             }
 
             if (parseFloat(data.voucher_discount_amount) > 0) {
-                let vLabel = "Voucher";
-                if (data.voucher_code) vLabel += ` (${data.voucher_code})`;
-                // Truncate voucher label if too long
-                if (vLabel.length > 20) vLabel = vLabel.substring(0, 20);
-                add(this.formatLine(vLabel, "-" + fmtRp(data.voucher_discount_amount)) + "\n");
+                let vLabel = `Voucher (${data.voucher_code || 'PROMO'})`;
+                add(this.formatLine(vLabel.substring(0, 20), "-" + fmtRp(data.voucher_discount_amount)) + "\n");
             }
 
             if (parseFloat(data.tax_amount) > 0) {
@@ -422,24 +407,19 @@ class BluetoothPrinter {
             // ─── 6. GRAND TOTAL ───
             add(LINE_EQUAL);
             add(BOLD_ON);
-            add(this.formatLine("TOTAL", "Rp " + fmtRp(data.total_amount)) + "\n");
+            add(DOUBLE_H);
+            add(this.formatLine("TOTAL", "Rp" + fmtRp(data.total_amount)) + "\n");
+            add(NORMAL_SIZE);
             add(BOLD_OFF);
             add(LINE_EQUAL);
 
             // ─── 7. PAYMENT DETAILS ───
             const payMethod = (data.payment_method || 'Cash').toUpperCase();
-            
             if (payMethod === 'CASH') {
-                const cashReceived = parseFloat(data.cash_received) || 0;
-                const changeAmount = parseFloat(data.change_amount) || 0;
-                
-                if (cashReceived > 0) {
-                    add(this.formatLine("Tunai", "Rp " + fmtRp(cashReceived)) + "\n");
-                    add(this.formatLine("Kembali", "Rp " + fmtRp(changeAmount)) + "\n");
-                }
-            } else if (payMethod === 'QRIS') {
-                add(this.formatLine("Metode", "QRIS") + "\n");
-                add(this.formatLine("Status", "LUNAS") + "\n");
+                add(this.formatLine("Tunai", fmtRp(data.cash_received)) + "\n");
+                add(this.formatLine("Kembali", fmtRp(data.change_amount)) + "\n");
+            } else {
+                add(this.formatLine("Status", "LUNAS (QRIS)") + "\n");
             }
 
             add("\n");
@@ -447,23 +427,18 @@ class BluetoothPrinter {
             // ─── 8. FOOTER ───
             add(ALIGN_CENTER);
             add(LINE_DOT);
-            add(BOLD_ON);
-            add("THANK YOU FOR VISITING\n");
-            add(BOLD_OFF);
-            add("Follow & Tag Us\n");
-            add("IG & Tiktok: @glaezeburger\n");
+            add("STREET SMASH BURGER\n");
+            add("BITE HARD, LIVE LARGE!\n");
             add(LINE_DOT);
+            add("\n");
+            
+            // Final Feed & Init (Reset for next print)
+            add(INIT);
+            add("\n\n\n\n\n");
 
-            // ─── 9. ORDER COUNT / ITEM COUNT ───
-            const totalItems = data.items ? data.items.reduce((sum, i) => sum + i.quantity, 0) : 0;
-            add(`Total ${totalItems} item(s)\n`);
-
-            // ─── 10. FEED FOR MANUAL TEAR ───
-            add("\n\n\n\n");
-
-            // Convert array to Uint8Array and send in chunks
+            // Convert to Uint8Array and send in safer chunks
             const dataBuffer = new Uint8Array(receipt);
-            const CHUNK_SIZE = 256; // Reduced to 256 bytes for safer BLE transmission of images
+            const CHUNK_SIZE = 128; // Reduced for safer BLE transmission
             const totalBytes = dataBuffer.length;
             
             for (let i = 0; i < totalBytes; i += CHUNK_SIZE) {
@@ -471,18 +446,19 @@ class BluetoothPrinter {
                 await this.characteristic.writeValue(chunk);
                 
                 if (onProgress) {
-                    const percent = Math.min(100, Math.round(((i + chunk.length) / totalBytes) * 100));
-                    onProgress(percent);
+                    onProgress(Math.round(((i + chunk.length) / totalBytes) * 100));
                 }
                 
-                // Allow hardware buffer to catch up
-                await new Promise(resolve => setTimeout(resolve, 30));
+                // Allow hardware buffer/BLE to sync
+                await new Promise(resolve => setTimeout(resolve, 40));
             }
 
             return { success: true };
 
         } catch (error) {
             console.error("Print Error:", error);
+            // Attempt to reset printer even on error
+            try { await this.characteristic.writeValue(new Uint8Array([0x1B, 0x40])); } catch(e) {}
             return { success: false, error: error.message };
         } finally {
             this.isPrinting = false;

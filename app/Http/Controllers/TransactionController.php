@@ -394,7 +394,7 @@ class TransactionController extends Controller
      */
     public function receiptData(Transaction $transaction)
     {
-        $transaction->load(['items.product', 'user', 'voucher']);
+        $transaction->load(['items.product', 'items.variations', 'user', 'voucher']);
 
         return response()->json([
             'id' => $transaction->id,

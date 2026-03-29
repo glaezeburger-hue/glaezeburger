@@ -13,6 +13,13 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- EasyQRCodeJS -->
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.6.1/dist/easy.qrcode.min.js"></script>
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0A56C8">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
 </head>
 <body class="font-sans antialiased bg-gray-50 text-gray-900">
     <div x-data="{ sidebarOpen: false }" class="flex h-screen overflow-hidden">
