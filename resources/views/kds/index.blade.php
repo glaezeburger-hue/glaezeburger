@@ -75,21 +75,33 @@
                          }">
                         
                         <!-- Card Header -->
-                        <div class="px-6 pt-6 pb-4 flex items-start justify-between">
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center space-x-2 mb-2">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Invoice</span>
-                                    <template x-if="order.payment_status === 'Pending'">
-                                        <span class="px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[8px] font-black uppercase tracking-widest animate-pulse">Waiting Payment</span>
-                                    </template>
+                        <div class="px-6 pt-6 pb-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <template x-if="order.payment_status === 'Pending'">
+                                    <div class="px-2 py-0.5 bg-orange-50 text-orange-500 rounded-lg border border-orange-100 text-[8px] font-black uppercase tracking-[0.15em] flex items-center shrink-0">
+                                        <div class="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1.5 opacity-75 animate-pulse"></div>
+                                        WAITING PAYMENT
+                                    </div>
+                                </template>
+                                <template x-if="order.payment_status === 'Paid'">
+                                    <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <span x-text="isOverdue(order.created_at) ? 'PRIORITY' : 'IN PROGRESS'"></span>
+                                    </div>
+                                </template>
+
+                                <div class="text-right">
+                                    <span class="text-[9px] font-bold uppercase tracking-widest block"
+                                          :class="isOverdue(order.created_at) ? 'text-red-500' : 'text-gray-400'">Elapsed</span>
                                 </div>
-                                <h3 class="text-lg font-black text-gray-900 tracking-tight leading-tight" x-text="order.invoice_number"></h3>
                             </div>
-                            <div class="text-right ml-4 shrink-0">
-                                <span class="text-[10px] font-bold uppercase tracking-widest block mb-2"
-                                      :class="isOverdue(order.created_at) ? 'text-red-500' : 'text-gray-400'">Elapsed</span>
-                                <div class="text-2xl font-black tracking-tight tabular-nums"
-                                     :class="isOverdue(order.created_at) ? 'text-red-600 animate-pulse' : 'text-gray-900'"
+                            
+                            <div class="flex items-end justify-between">
+                                <div class="min-w-0">
+                                    <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest block mb-0.5">Invoice</span>
+                                    <h3 class="text-base font-black text-gray-900 tracking-tight truncate uppercase" x-text="order.invoice_number"></h3>
+                                </div>
+                                <div class="text-2xl font-black tracking-tighter tabular-nums leading-none ml-4 shrink-0"
+                                     :class="isOverdue(order.created_at) ? 'text-red-600' : 'text-gray-900'"
                                      x-text="getElapsedTime(order.created_at)"></div>
                             </div>
                         </div>
@@ -100,9 +112,29 @@
                         <!-- Card Body (Items) -->
                         <div class="flex-1 px-6 py-5 space-y-3">
                             <template x-for="item in order.items" :key="item.id">
-                                <div class="flex items-center bg-gray-50 px-4 py-3 rounded-xl">
-                                    <div class="bg-smash-blue text-white w-11 h-11 rounded-xl text-sm font-black flex items-center justify-center mr-4 shrink-0 shadow-sm" x-text="item.quantity + 'x'"></div>
-                                    <div class="text-[15px] font-bold text-gray-800 uppercase leading-snug tracking-tight" x-text="item.name"></div>
+                                <div class="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
+                                    <div class="flex items-center">
+                                        <div class="bg-smash-blue text-white w-10 h-10 rounded-xl text-xs font-black flex items-center justify-center mr-3 shrink-0 shadow-sm" x-text="item.quantity + 'x'"></div>
+                                        <div class="text-[14px] font-black text-gray-900 uppercase leading-none tracking-tight" x-text="item.name"></div>
+                                    </div>
+                                    
+                                    <!-- Variations -->
+                                    <template x-if="item.variations && item.variations.length > 0">
+                                        <div class="mt-2 flex flex-wrap gap-1 pl-13 ml-[52px]">
+                                            <template x-for="vName in item.variations" :key="vName">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-wider">
+                                                    + <span x-text="vName"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Notes -->
+                                    <template x-if="item.notes">
+                                        <div class="mt-1.5 pl-13 ml-[52px] text-[10px] font-bold text-red-500 uppercase italic tracking-widest bg-red-50/50 py-1 px-2 rounded-lg border border-red-50">
+                                            * <span x-text="item.notes"></span>
+                                        </div>
+                                    </template>
                                 </div>
                             </template>
                         </div>

@@ -368,6 +368,22 @@
                     return Math.max(0, Math.min(...possibleQuantities));
                 },
 
+                getItemUnitPrice(item) {
+                    let price = parseFloat(item.selling_price);
+                    if (item.variations && item.variation_groups) {
+                        item.variation_groups.forEach(group => {
+                            const selected = item.variations[group.id]?.selected || [];
+                            selected.forEach(optId => {
+                                const opt = group.options.find(o => o.id == optId);
+                                if (opt && opt.price_modifier) {
+                                    price += parseFloat(opt.price_modifier);
+                                }
+                            });
+                        });
+                    }
+                    return price;
+                },
+
                 decreaseQty(index) {
                     if (this.cart[index].quantity > 1) {
                         this.cart[index].quantity--;
@@ -546,7 +562,8 @@
                                 cart: this.cart.map(item => ({ 
                                     id: item.id, 
                                     quantity: item.quantity,
-                                    notes: item.notes || null 
+                                    notes: item.notes || null,
+                                    variations: item.variations || null
                                 })),
                                 apply_tax: this.applyTax,
                                 discount_type: this.discountType,
@@ -1423,7 +1440,7 @@
             </header>
 
             <div class="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3" style="-webkit-overflow-scrolling: touch;">
-                <template x-for="(item, index) in cart" :key="item.id">
+                <template x-for="(item, index) in cart" :key="item.cartKey">
                     <div class="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-start space-x-3">
                         <div class="h-12 w-12 rounded-xl bg-gray-50 flex-shrink-0 overflow-hidden">
                             <template x-if="item.image_path">
@@ -1453,7 +1470,7 @@
                                 </div>
                             </template>
 
-                            <p class="text-smash-blue font-black text-[11px] mt-1" x-text="formatPrice(item.selling_price)"></p>
+                            <p class="text-smash-blue font-black text-[11px] mt-1" x-text="formatPrice(getItemUnitPrice(item))"></p>
                             <input type="text" x-model="item.notes" placeholder="Notes (e.g. Extra Spicy)" class="mt-1.5 w-full text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-smash-blue/20 placeholder-gray-300 transition-all uppercase tracking-widest">
                         </div>
                         <div class="flex flex-col items-end space-y-2">

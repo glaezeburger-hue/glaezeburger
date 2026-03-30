@@ -20,7 +20,7 @@ class KdsController extends Controller
      */
     public function getPendingOrders()
     {
-        $orders = Transaction::with('items.product')
+        $orders = Transaction::with(['items.product', 'items.variations'])
             ->where('order_status', '!=', 'Sudah')
             ->orderBy('created_at', 'asc') // FIFO
             ->get()
@@ -35,6 +35,8 @@ class KdsController extends Controller
                             'id' => $item->id,
                             'name' => $item->product->name ?? 'Unknown',
                             'quantity' => $item->quantity,
+                            'notes' => $item->notes,
+                            'variations' => $item->variations->map(fn($v) => $v->option_name)->toArray(),
                         ];
                     }),
                 ];

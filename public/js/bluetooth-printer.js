@@ -328,7 +328,6 @@ class BluetoothPrinter {
                 const logoBytes = await this.imageToEscPos(data.logo_url, 180); // Safer logo width
                 if (logoBytes && logoBytes.length > 0) {
                     add(logoBytes);
-                    add("\n");
                     add(BOLD_ON);
                     add("STREET SMASH BURGER\n");
                     add(BOLD_OFF);
@@ -422,19 +421,17 @@ class BluetoothPrinter {
                 add(this.formatLine("Status", "LUNAS (QRIS)") + "\n");
             }
 
-            add("\n");
-
             // ─── 8. FOOTER ───
             add(ALIGN_CENTER);
             add(LINE_DOT);
-            add("STREET SMASH BURGER\n");
-            add("BITE HARD, LIVE LARGE!\n");
-            add(LINE_DOT);
+            add("Follow & Tag Us\n");
+            add("IG & TikTok : @glaezeburger\n");
+            add(LINE_EQUAL);
             add("\n");
             
             // Final Feed & Init (Reset for next print)
             add(INIT);
-            add("\n\n\n\n\n");
+            add("\n\n");
 
             // Convert to Uint8Array and send in safer chunks
             const dataBuffer = new Uint8Array(receipt);
