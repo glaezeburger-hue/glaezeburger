@@ -38,10 +38,10 @@
 }" @keydown.escape="showModal = false" class="space-y-8">
 
     <!-- Actions Header -->
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div class="flex flex-col md:flex-row md:items-center gap-4 flex-1">
             <!-- Search -->
-            <div class="relative w-full md:w-96 group">
+            <div class="relative w-full md:w-80 lg:w-96 group">
                 <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <svg class="h-5 w-5 text-gray-400 group-focus-within:text-smash-blue transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -56,7 +56,7 @@
 
             <!-- Filters -->
             <div class="flex items-center gap-2 w-full md:w-auto flex-1">
-                <div class="relative flex-1 md:w-48">
+                <div class="relative flex-1 md:w-40 lg:w-48">
                     <select onchange="window.location.href = '?role=' + this.value + '&search={{ request('search') }}&status={{ request('status') }}'"
                         class="appearance-none block w-full pl-4 pr-10 py-3 text-sm border-gray-200 focus:outline-none focus:ring-4 focus:ring-smash-blue/10 focus:border-smash-blue rounded-2xl transition-all shadow-sm bg-white font-medium text-gray-600 uppercase">
                         <option value="">All Roles</option>
@@ -71,7 +71,7 @@
                     </div>
                 </div>
 
-                <div class="relative flex-1 md:w-48">
+                <div class="relative flex-1 md:w-40 lg:w-48">
                     <select onchange="window.location.href = '?status=' + this.value + '&search={{ request('search') }}&role={{ request('role') }}'"
                         class="appearance-none block w-full pl-4 pr-10 py-3 text-sm border-gray-200 focus:outline-none focus:ring-4 focus:ring-smash-blue/10 focus:border-smash-blue rounded-2xl transition-all shadow-sm bg-white font-medium text-gray-600 uppercase">
                         <option value="">All Status</option>

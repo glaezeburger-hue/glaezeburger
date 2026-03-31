@@ -65,48 +65,94 @@
         <!-- STATE: SHIFT MANAGEMENT (CLOSE SHIFT & PETTY CASH) -->
         <div class="flex flex-col gap-8 mb-10 pb-4">
             <!-- Main Summary Cards (Full Width Layout) -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Saldo Awal</p>
-                        <p class="text-xl font-black text-gray-900">{{ number_format($activeShift->opening_balance, 0, ',', '.') }}</p>
+            <!-- Main Summary Cards (Responsive Grid) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-6">
+                <!-- Saldo Awal -->
+                <div class="bg-white rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-blue-200 transition-all group relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3">
+                            <h3 class="text-gray-400 text-[10px] font-black uppercase tracking-widest">Saldo Awal</h3>
+                        </div>
+                        <div class="text-xl font-black text-gray-900 tracking-tight">Rp {{ number_format($activeShift->opening_balance, 0, ',', '.') }}</div>
                     </div>
-                    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Sales (Cash)</p>
-                        <p class="text-xl font-black text-green-600">+ {{ number_format($summary['total_cash_sales'], 0, ',', '.') }}</p>
+                </div>
+
+                <!-- Sales Cash -->
+                <div class="bg-white rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-green-200 transition-all group relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-green-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3 text-green-600">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Sales (Cash)</h3>
+                        </div>
+                        <div class="text-xl font-black text-green-600 tracking-tight">+ {{ number_format($summary['total_cash_sales'], 0, ',', '.') }}</div>
                     </div>
-                    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Sales (QRIS)</p>
-                        <p class="text-xl font-black text-purple-600">+ {{ number_format($summary['total_qris_sales'], 0, ',', '.') }}</p>
+                </div>
+
+                <!-- Sales QRIS -->
+                <div class="bg-white rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-purple-200 transition-all group relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3 text-purple-600">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                            <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Sales (QRIS)</h3>
+                        </div>
+                        <div class="text-xl font-black text-purple-600 tracking-tight">+ {{ number_format($summary['total_qris_sales'], 0, ',', '.') }}</div>
                     </div>
-                    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Petty Cash (Net)</p>
-                        <p class="text-xl font-black" :class="pettyCashNet >= 0 ? 'text-blue-600' : 'text-orange-600'">
+                </div>
+
+                <!-- Petty Cash Net -->
+                <div class="bg-white rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-blue-200 transition-all group relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3">
+                            <h3 class="text-gray-400 text-[10px] font-black uppercase tracking-widest">Petty Cash (Net)</h3>
+                        </div>
+                        <div class="text-xl font-black tracking-tight" :class="pettyCashNet >= 0 ? 'text-blue-600' : 'text-orange-600'">
                             <span x-text="pettyCashNet >= 0 ? '+' : ''"></span>
                             <span x-text="formatRupiah(pettyCashNet)"></span>
-                        </p>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Omzet</p>
-                        <p class="text-xl font-black text-smash-blue">{{ number_format($summary['total_cash_sales'] + $summary['total_qris_sales'], 0, ',', '.') }}</p>
+                </div>
+
+                <!-- Total Omzet -->
+                <div class="bg-white rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-smash-blue transition-all group relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3 text-smash-blue">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Omzet</h3>
+                        </div>
+                        <div class="text-xl font-black text-smash-blue tracking-tight">Rp {{ number_format($summary['total_cash_sales'] + $summary['total_qris_sales'], 0, ',', '.') }}</div>
                     </div>
-                    <div class="bg-smash-blue p-6 rounded-3xl shadow-xl shadow-blue-100">
-                        <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Target Saldo Akhir</p>
-                        <p class="text-xl font-black text-white">{{ number_format($summary['expected_balance'], 0, ',', '.') }}</p>
+                </div>
+
+                <!-- Target Saldo Akhir -->
+                <div class="bg-gradient-to-br from-blue-600 to-smash-blue rounded-3xl p-6 shadow-xl shadow-blue-200 group relative overflow-hidden text-white">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-white rounded-full opacity-10 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-50">Target Saldo Akhir</h3>
+                        </div>
+                        <div class="text-xl font-black tracking-tight">Rp {{ number_format($summary['expected_balance'], 0, ',', '.') }}</div>
                     </div>
                 </div>
             </div>
+            </div>
 
             <!-- Bottom Content: Form & Calculator Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
                 
                 <!-- Column 1: Denomination Calculator -->
-                <div class="lg:col-span-2">
+                <div class="xl:col-span-2">
                     <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden h-full">
                         <div class="p-6 border-b border-gray-50 flex items-center justify-between">
                             <h4 class="font-black text-lg tracking-tighter uppercase italic">Kalkulator Uang Fisik</h4>
                             <button @click="resetDenominations()" class="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-widest px-3 py-1 bg-gray-50 rounded-lg transition-colors">Reset</button>
                         </div>
-                    <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-12 lg:gap-x-16 gap-y-6 lg:gap-y-8">
+                    <div class="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-x-6 md:gap-x-10 xl:gap-x-16 gap-y-4 lg:gap-y-6">
                         <template x-for="(d, index) in denominations" :key="index">
                             <div class="flex items-center gap-4 group py-3 border-b border-gray-50/50">
                                 <span class="text-xs font-black text-gray-400 w-20 shrink-0" x-text="d.label"></span>
@@ -191,36 +237,30 @@
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
                                         @endif
                                     </div>
-                                    <div>
-                                        <p class="text-xs font-black text-gray-800 uppercase tracking-tight">{{ $move->reason }}</p>
-                                        <div class="flex items-center mt-1 space-x-2">
-                                            <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{{ $move->created_at->format('H:i') }}</span>
-                                            <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">•</span>
-                                            <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{{ $move->user->name ?? 'System' }}</span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-black text-gray-800 uppercase tracking-tight truncate">{{ $move->reason }}</p>
+                                        <div class="flex items-center mt-0.5 space-x-2 text-[8px] font-bold text-gray-400/80 uppercase tracking-widest">
+                                            <span>{{ $move->created_at->format('H:i') }}</span>
+                                            <span>•</span>
+                                            <span class="truncate">{{ $move->user->name ?? 'System' }}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-black {{ $move->type === 'in' ? 'text-green-600' : 'text-red-600' }} tracking-tight">
-                                        {{ $move->type === 'in' ? '+' : '-' }} {{ number_format($move->amount, 0, ',', '.') }}
+                                <div class="text-right shrink-0 ml-4">
+                                    <p class="text-[13px] font-black {{ $move->type === 'in' ? 'text-green-600' : 'text-red-500' }} tracking-tight">
+                                        {{ $move->type === 'in' ? '+' : '-' }}{{ number_format($move->amount, 0, ',', '.') }}
                                     </p>
-                                    <p class="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-0.5">IDR</p>
                                 </div>
                             </div>
                         @empty
-                            <div class="p-12 text-center space-y-3">
-                                <div class="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto border border-gray-100/50">
-                                    <svg class="w-6 h-6 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div class="p-10 text-center space-y-3">
+                                <div class="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mx-auto border border-gray-100/50">
+                                    <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </div>
-                                <p class="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Belum ada mutasi</p>
+                                <p class="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">Belum ada mutasi</p>
                             </div>
                         @endforelse
                     </div>
-                    @if($activeShift->cashMovements->count() > 0)
-                        <div class="p-4 bg-gray-50 border-t border-gray-50 text-center">
-                            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest italic">Menampilkan {{ $activeShift->cashMovements->count() }} mutasi kas hari ini</p>
-                        </div>
-                    @endif
                 </div>
             </div>
 

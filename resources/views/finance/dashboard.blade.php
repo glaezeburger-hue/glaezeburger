@@ -7,24 +7,29 @@
 
     {{-- Period Selector & Actions --}}
     {{-- Period Selector & Actions --}}
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0 bg-white/50 p-4 rounded-2xl border border-gray-100/50 shadow-sm backdrop-blur-sm">
-        <form action="{{ route('finance.dashboard') }}" method="GET" class="flex flex-wrap items-center gap-1.5 md:gap-2 w-full lg:w-auto">
+    <div class="flex flex-row justify-between items-center bg-white/50 p-3 md:p-4 rounded-2xl border border-gray-100/50 shadow-sm backdrop-blur-sm gap-4">
+        <form action="{{ route('finance.dashboard') }}" method="GET" class="flex flex-wrap md:flex-nowrap items-center gap-1.5 md:gap-2">
             @foreach(['today' => 'Today', '7_days' => '7 Days', 'this_month' => 'This Month', 'last_month' => 'Last Month'] as $key => $label)
                 <button type="submit" name="period" value="{{ $key }}" 
-                    class="px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border 
+                    class="px-2.5 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border 
                     {{ $period === $key ? 'bg-smash-blue text-white border-smash-blue shadow-lg shadow-blue-500/20' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-smash-blue' }}">
                     {{ $label }}
                 </button>
             @endforeach
             
-            <div x-data="{ open: {{ $period === 'custom' ? 'true' : 'false' }} }" class="relative flex items-center gap-2">
+            <div x-data="{ open: {{ $period === 'custom' ? 'true' : 'false' }} }" class="relative" @click.away="open = false">
                 <button type="button" @click="open = !open" 
-                    class="px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border 
+                    class="px-2.5 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border 
                     {{ $period === 'custom' ? 'bg-smash-blue text-white border-smash-blue shadow-lg shadow-blue-500/20' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-smash-blue' }}">
                     Custom
                 </button>
                 
-                <div x-show="open" class="flex items-center gap-1.5 absolute top-full left-0 mt-2 p-3 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn" style="display: none;">
+                <div x-show="open" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 translate-y-1"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     class="flex items-center gap-2 absolute top-full left-0 md:left-auto md:right-0 mt-3 p-4 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-[100] min-w-[320px]" 
+                     style="display: none;">
                     <input type="date" name="date_from" value="{{ request('date_from') }}" class="rounded-lg border-gray-100 text-[10px] font-bold focus:ring-smash-blue/20">
                     <span class="text-gray-300 font-bold">-</span>
                     <input type="date" name="date_to" value="{{ request('date_to') }}" class="rounded-lg border-gray-100 text-[10px] font-bold focus:ring-smash-blue/20">
@@ -33,12 +38,13 @@
             </div>
         </form>
 
-        <div class="w-full lg:w-auto flex justify-end">
-            <a href="{{ route('finance.profit-loss', request()->all()) }}" target="_blank" class="w-full lg:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-gray-900 hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-[0.15em] shadow-lg shadow-black/10 transition-all active:scale-95">
-                <svg class="w-4 h-4 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="shrink-0">
+            <a href="{{ route('finance.profit-loss', request()->all()) }}" target="_blank" 
+               class="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 bg-gray-900 hover:bg-black text-white rounded-xl shadow-lg shadow-black/10 transition-all active:scale-95 group" 
+               title="Print P&L Statement">
+                <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                 </svg>
-                Print P&L Statement
             </a>
         </div>
     </div>
