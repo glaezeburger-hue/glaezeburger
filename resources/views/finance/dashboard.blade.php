@@ -7,7 +7,7 @@
 
     {{-- Period Selector & Actions --}}
     {{-- Period Selector & Actions --}}
-    <div class="flex flex-row justify-between items-center bg-white/50 p-3 md:p-4 rounded-2xl border border-gray-100/50 shadow-sm backdrop-blur-sm gap-4">
+    <div class="flex flex-row justify-between items-center bg-white/50 p-3 md:p-4 rounded-2xl border border-gray-100/50 shadow-sm backdrop-blur-sm gap-4 relative z-50">
         <form action="{{ route('finance.dashboard') }}" method="GET" class="flex flex-wrap md:flex-nowrap items-center gap-1.5 md:gap-2">
             @foreach(['today' => 'Today', '7_days' => '7 Days', 'this_month' => 'This Month', 'last_month' => 'Last Month'] as $key => $label)
                 <button type="submit" name="period" value="{{ $key }}" 
