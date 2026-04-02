@@ -515,7 +515,44 @@
                 },
 
                 get changeAmount() {
-                    return this.cashReceived - this.grandTotal;
+                    const received = parseFloat(this.cashReceived) || 0;
+                    return received - this.grandTotal;
+                },
+
+                get suggestedCashAmounts() {
+                    const total = this.grandTotal;
+                    if (total <= 0) return [];
+                    
+                    const suggestions = new Set();
+                    suggestions.add(total); // Uang Pas is always first
+                    
+                    // Round up to nearest 1K, 5K, 10K, 50K, 100K
+                    const roundUps = [1000, 5000, 10000, 50000, 100000];
+                    for (const r of roundUps) {
+                        const rounded = Math.ceil(total / r) * r;
+                        if (rounded > total && rounded <= total * 3) {
+                            suggestions.add(rounded);
+                        }
+                    }
+                    
+                    // Add common over-payment denominations
+                    const denoms = [10000, 20000, 50000, 75000, 100000, 150000, 200000];
+                    for (const d of denoms) {
+                        if (d >= total && d <= total * 5) {
+                            suggestions.add(d);
+                        }
+                    }
+                    
+                    // Convert to sorted array, cap at 8
+                    return [...suggestions].sort((a, b) => a - b).slice(0, 8);
+                },
+
+                addDenomination(value) {
+                    this.cashReceived = (parseInt(this.cashReceived) || 0) + value;
+                },
+
+                clearCashReceived() {
+                    this.cashReceived = 0;
                 },
 
                 formatPrice(price) {
@@ -1630,31 +1667,60 @@
                                 </div>
 
                                 <!-- Cash Calculator -->
-                                <div x-show="paymentMethod === 'Cash'" x-transition x-cloak class="bg-blue-50/50 rounded-[2.5rem] p-8 border border-blue-100/50 space-y-6">
+                                <div x-show="paymentMethod === 'Cash'" x-transition x-cloak class="bg-white rounded-3xl p-5 md:p-6 border border-gray-100 shadow-sm space-y-5">
+                                    
+                                    <!-- Title and Reset -->
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-[11px] font-black text-smash-blue uppercase tracking-widest">Cash Calculator</h3>
-                                        <span class="px-2 py-1 bg-white border border-blue-100 rounded-lg text-[9px] font-black text-smash-blue uppercase tracking-widest">Auto Change</span>
+                                        <h3 class="text-[11px] font-black text-smash-blue uppercase tracking-widest flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                            Cash Payment
+                                        </h3>
+                                        <button @click="clearCashReceived()" class="px-2.5 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all">Reset</button>
                                     </div>
-                                    
-                                    <!-- Quick Cash -->
-                                    <div class="grid grid-cols-2 gap-3 text-[11px] font-black tracking-widest uppercase">
-                                        <button @click="cashReceived = grandTotal" class="py-3 px-2 bg-white border border-blue-100 rounded-2xl hover:bg-smash-blue hover:text-white transition-all text-smash-blue shadow-sm">Uang Pas</button>
-                                        <button @click="cashReceived = 20000" class="py-3 px-2 bg-white border border-blue-100 rounded-2xl hover:bg-smash-blue hover:text-white transition-all text-gray-600 shadow-sm">20.000</button>
-                                        <button @click="cashReceived = 50000" class="py-3 px-2 bg-white border border-blue-100 rounded-2xl hover:bg-smash-blue hover:text-white transition-all text-gray-600 shadow-sm">50.000</button>
-                                        <button @click="cashReceived = 100000" class="py-3 px-2 bg-white border border-blue-100 rounded-2xl hover:bg-smash-blue hover:text-white transition-all text-gray-600 shadow-sm">100.000</button>
-                                    </div>
-                                    
-                                    <div class="space-y-4">
+
+                                    <!-- Section A: Manual Input & Kembalian (Side-by-side) -->
+                                    <div class="grid grid-cols-2 gap-3" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
                                         <div>
-                                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Cash Received</label>
-                                            <div class="relative">
-                                                <span class="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400">Rp</span>
-                                                <input type="number" x-model.number="cashReceived" class="w-full pl-11 pr-4 py-4 bg-white border-2 border-transparent focus:border-smash-blue rounded-3xl font-black text-lg text-gray-900 shadow-sm transition-all focus:outline-none" placeholder="0">
+                                            <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cash Received</label>
+                                            <div class="relative bg-gray-50 rounded-2xl border border-gray-100 focus-within:border-smash-blue focus-within:ring-2 focus-within:ring-smash-blue/20 transition-all overflow-hidden">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400 text-xs text-center w-6">Rp</span>
+                                                <input type="number" x-model.number="cashReceived" class="w-full pl-10 pr-3 py-3 bg-transparent border-0 focus:border-0 focus:ring-0 font-black text-lg text-gray-900 focus:outline-none rounded-none" placeholder="0">
                                             </div>
                                         </div>
-                                        <div class="flex justify-between items-center py-4 border-t border-blue-100/50">
-                                            <span class="text-[11px] font-black text-gray-500 uppercase tracking-widest">Change</span>
-                                            <span class="text-3xl font-black tracking-tighter" :class="changeAmount < 0 ? 'text-red-500' : 'text-green-500'" x-text="formatPrice(Math.max(0, changeAmount))"></span>
+                                        <div class="rounded-2xl p-3 border flex flex-col justify-center transition-colors overflow-hidden" :class="changeAmount >= 0 ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'">
+                                            <span class="text-[9px] font-black uppercase tracking-widest truncate" :class="changeAmount >= 0 ? 'text-green-600' : 'text-red-500'" x-text="changeAmount >= 0 ? 'Kembalian' : 'Uang Kurang'"></span>
+                                            <span class="text-xl font-black tracking-tighter mt-0.5 truncate" :class="changeAmount >= 0 ? 'text-green-600' : 'text-red-500'" x-text="formatPrice(Math.abs(changeAmount))"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Section B: Smart Suggestions (Grid Layout) -->
+                                    <div>
+                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Smart Suggestions</label>
+                                        <div class="grid grid-cols-3 gap-2" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                                            <template x-for="(amount, idx) in suggestedCashAmounts" :key="amount">
+                                                <button @click="cashReceived = amount" 
+                                                    :class="idx === 0 
+                                                        ? 'bg-smash-blue text-white border-smash-blue shadow-md shadow-blue-500/20' 
+                                                        : (cashReceived === amount ? 'bg-smash-blue text-white border-smash-blue' : 'bg-white text-gray-600 border-gray-200 hover:border-smash-blue hover:text-smash-blue')"
+                                                    class="py-2.5 px-2 rounded-xl border text-[10px] font-black tracking-widest uppercase transition-all active:scale-95 text-center">
+                                                    <span x-text="idx === 0 ? 'PAS' : new Intl.NumberFormat('id-ID').format(amount)"></span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- Section C: Denomination Grid (Compact) -->
+                                    <div>
+                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                            Hitung Pecahan <span class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[8px]">+ Tap to add</span>
+                                        </label>
+                                        <div class="grid grid-cols-3 gap-2" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                                            <button @click="addDenomination(100000)" class="py-2.5 bg-red-50 border border-red-100 hover:bg-red-100 active:scale-95 rounded-xl text-red-600 font-black text-xs transition-all tracking-wider shadow-sm text-center">100K</button>
+                                            <button @click="addDenomination(50000)" class="py-2.5 bg-blue-50 border border-blue-100 hover:bg-blue-100 active:scale-95 rounded-xl text-blue-600 font-black text-xs transition-all tracking-wider shadow-sm text-center">50K</button>
+                                            <button @click="addDenomination(20000)" class="py-2.5 bg-green-50 border border-green-100 hover:bg-green-100 active:scale-95 rounded-xl text-green-600 font-black text-xs transition-all tracking-wider shadow-sm text-center">20K</button>
+                                            <button @click="addDenomination(10000)" class="py-2.5 bg-purple-50 border border-purple-100 hover:bg-purple-100 active:scale-95 rounded-xl text-purple-600 font-black text-xs transition-all tracking-wider shadow-sm text-center">10K</button>
+                                            <button @click="addDenomination(5000)" class="py-2.5 bg-amber-50 border border-amber-100 hover:bg-amber-100 active:scale-95 rounded-xl text-amber-600 font-black text-xs transition-all tracking-wider shadow-sm text-center">5K</button>
+                                            <button @click="addDenomination(2000)" class="py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 active:scale-95 rounded-xl text-gray-600 font-black text-xs transition-all tracking-wider shadow-sm text-center">2K</button>
                                         </div>
                                     </div>
                                 </div>

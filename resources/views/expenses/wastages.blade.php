@@ -57,7 +57,8 @@
 
     {{-- Wastage Table --}}
     <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50/50">
                 <tr>
                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
@@ -124,6 +125,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
         
         @if($wastages->hasPages())
         <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
