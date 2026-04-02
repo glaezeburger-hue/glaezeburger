@@ -765,6 +765,7 @@
                         
                         const data = await response.json();
                         if (data.success) {
+                            this.showQrisModal = false;
                             this.playSuccessSound();
                             this.printReceipt(this.qrisTransactionId);
                             
