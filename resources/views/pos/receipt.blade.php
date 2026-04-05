@@ -70,6 +70,12 @@
             <td class="text-left">Cashier</td>
             <td class="text-left">: {{ $transaction->user ? $transaction->user->name : 'N/A' }}</td>
         </tr>
+        @if($transaction->customer_name)
+        <tr>
+            <td class="text-left">Customer</td>
+            <td class="text-left">: {{ $transaction->customer_name }}</td>
+        </tr>
+        @endif
     </table>
 
     <div class="dashed-line"></div>

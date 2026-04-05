@@ -351,6 +351,9 @@ class BluetoothPrinter {
             add(this.formatLine("No.", data.invoice_number || '-') + "\n");
             add(this.formatLine("Tgl", data.created_at || '-') + "\n");
             add(this.formatLine("Kasir", (data.cashier || 'Kasir').substring(0, 20)) + "\n");
+            if (data.customer_name) {
+                add(this.formatLine("Nama", data.customer_name.substring(0, 20)) + "\n");
+            }
             add(this.formatLine("Mode", (data.payment_method || 'Cash')) + "\n");
             add(LINE_DASH);
 

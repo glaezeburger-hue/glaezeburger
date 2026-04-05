@@ -28,6 +28,7 @@ class KdsController extends Controller
                 return [
                     'id' => $transaction->id,
                     'invoice_number' => $transaction->invoice_number,
+                    'customer_name' => $transaction->customer_name,
                     'payment_status' => $transaction->payment_status,
                     'created_at' => $transaction->created_at->toIso8601String(),
                     'items' => $transaction->items->map(function ($item) {

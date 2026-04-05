@@ -42,6 +42,7 @@
                 categories: @js($categories),
                 rawMaterials: @js($rawMaterials),
                 cart: [],
+                customerName: '',
                 sidebarOpen: false,
                 cartOpen: false,
                 searchQuery: '',
@@ -412,6 +413,7 @@
                             this.discountType = null;
                             this.discountValue = 0;
                             this.applyTax = false;
+                            this.customerName = '';
                             this.removeVoucher();
                         }
                     });
@@ -596,6 +598,7 @@
                             },
                             body: JSON.stringify({
                                 payment_method: this.paymentMethod,
+                                customer_name: this.customerName,
                                 cart: this.cart.map(item => ({ 
                                     id: item.id, 
                                     quantity: item.quantity,
@@ -668,6 +671,7 @@
                     this.discountType = null;
                     this.discountValue = 0;
                     this.applyTax = false;
+                    this.customerName = '';
                     this.showCheckout = false;
                     this.showQrisModal = false;
                     this.paymentReference = '';
@@ -1606,6 +1610,19 @@
                         </div>
                         <span x-show="taxAmount > 0" class="text-[10px] font-black text-gray-500 uppercase tracking-widest" x-text="'+ ' + formatPrice(taxAmount)"></span>
                     </label>
+                </div>
+
+                <!-- Customer Name Input -->
+                <div class="pt-1">
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400 group-focus-within:text-smash-blue transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </span>
+                        <input type="text" x-model="customerName" maxlength="20" placeholder="Nama pemesan (opsional)" 
+                            class="block w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-[11px] font-bold text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-smash-blue/20 focus:border-smash-blue hover:border-gray-300 transition-all uppercase tracking-widest">
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-end border-t border-gray-100 pt-4">

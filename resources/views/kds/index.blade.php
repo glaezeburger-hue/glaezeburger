@@ -99,6 +99,14 @@
                                 <div class="min-w-0">
                                     <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest block mb-0.5">Invoice</span>
                                     <h3 class="text-base font-black text-gray-900 tracking-tight truncate uppercase" x-text="order.invoice_number"></h3>
+                                    <template x-if="order.customer_name">
+                                        <div class="mt-1 flex items-center gap-1.5">
+                                            <div class="px-2 py-0.5 bg-blue-50 text-smash-blue rounded-md border border-blue-100 text-[11px] font-black uppercase tracking-widest inline-flex items-center">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                                <span x-text="order.customer_name"></span>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                                 <div class="text-2xl font-black tracking-tighter tabular-nums leading-none ml-4 shrink-0"
                                      :class="isOverdue(order.created_at) ? 'text-red-600' : 'text-gray-900'"

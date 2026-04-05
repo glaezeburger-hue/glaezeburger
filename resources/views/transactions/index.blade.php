@@ -191,14 +191,14 @@
         <form method="GET" action="{{ route('transactions.index') }}" class="flex flex-wrap items-end gap-4">
             <!-- Search -->
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Search Invoice</label>
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Search Invoice / Name</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                         <svg class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="INV-20260226-..."
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="INV-2026... / Name"
                         class="w-full pl-10 pr-4 py-2.5 border border-gray-100 bg-gray-50/50 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-smash-blue/20 focus:border-smash-blue transition-all">
                 </div>
             </div>
@@ -294,6 +294,12 @@
                                     <span class="px-2 py-0.5 text-[9px] font-black bg-amber-50 text-amber-600 border border-amber-100 rounded-md uppercase tracking-widest">Imported</span>
                                 @endif
                             </div>
+                            @if($txn->customer_name)
+                                <div class="text-[10px] font-bold text-gray-400 mt-0.5 uppercase flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                    {{ $txn->customer_name }}
+                                </div>
+                            @endif
                         </td>
                         <td class="px-4 md:px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-bold text-gray-700">{{ $txn->created_at->format('d M Y') }}</div>
@@ -450,7 +456,15 @@
                                 <h3 class="text-lg font-black text-gray-900 uppercase tracking-tight">Order Detail</h3>
                                 <span x-show="detail?.is_imported" class="px-2 py-0.5 text-[9px] font-black bg-amber-50 text-amber-600 border border-amber-100 rounded-md uppercase tracking-widest" style="display: none;">Imported</span>
                             </div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1" x-text="detail?.invoice_number || '...'"></p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest" x-text="detail?.invoice_number || '...'"></p>
+                                <template x-if="detail?.customer_name">
+                                    <p class="text-[10px] font-black text-smash-blue uppercase tracking-widest flex items-center bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                        <span x-text="detail.customer_name"></span>
+                                    </p>
+                                </template>
+                            </div>
                         </div>
                         <button @click="closeDetail()" class="p-2 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>

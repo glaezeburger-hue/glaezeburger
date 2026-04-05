@@ -17,9 +17,12 @@ class TransactionController extends Controller
     {
         $query = Transaction::with(['items.product', 'user', 'voucher']);
 
-        // Search by invoice number
+        // Search by invoice number or customer name
         if ($request->filled('search')) {
-            $query->where('invoice_number', 'like', '%' . $request->search . '%');
+            $query->where(function($q) use ($request) {
+                $q->where('invoice_number', 'like', '%' . $request->search . '%')
+                  ->orWhere('customer_name', 'like', '%' . $request->search . '%');
+            });
         }
 
         // Filter by payment method
@@ -89,6 +92,7 @@ class TransactionController extends Controller
         return response()->json([
             'id' => $transaction->id,
             'invoice_number' => $transaction->invoice_number,
+            'customer_name' => $transaction->customer_name,
             'created_at' => $transaction->created_at->format('d M Y, H:i'),
             'cashier' => $transaction->user->name ?? '-',
             'payment_method' => $transaction->payment_method,
@@ -162,6 +166,7 @@ class TransactionController extends Controller
             'discount_value' => 'nullable|numeric|min:0',
             'voucher_code' => 'nullable|string',
             'transaction_date' => 'nullable|date',
+            'customer_name' => 'nullable|string|max:20',
         ]);
 
         // Check for active shift
@@ -307,6 +312,7 @@ class TransactionController extends Controller
             // 1. Create Transaction
             $transaction = new Transaction([
                 'invoice_number' => Transaction::generateInvoiceNumber(),
+                'customer_name' => $request->input('customer_name'),
                 'user_id' => auth()->id(),
                 'cash_register_id' => $activeShift->id,
                 'subtotal' => $subtotal,
@@ -399,6 +405,7 @@ class TransactionController extends Controller
         return response()->json([
             'id' => $transaction->id,
             'invoice_number' => $transaction->invoice_number,
+            'customer_name' => $transaction->customer_name,
             'created_at' => $transaction->created_at->format('d/m/Y H:i'),
             'cashier' => $transaction->user->name ?? 'N/A',
             'subtotal' => $transaction->subtotal,
