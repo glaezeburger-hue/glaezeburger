@@ -27,6 +27,9 @@ class PosController extends Controller
             'category', 
             'rawMaterials', 
             'variationGroups.options' => function($q) {
+                $q->where('is_active', true)->with('excludedIngredients');
+            },
+            'addons' => function($q) {
                 $q->where('is_active', true);
             }
         ])->where('is_active', true)->latest()->get();
@@ -69,6 +72,9 @@ class PosController extends Controller
             'category', 
             'rawMaterials', 
             'variationGroups.options' => function($q) {
+                $q->where('is_active', true);
+            },
+            'addons' => function($q) {
                 $q->where('is_active', true);
             }
         ])->where('is_active', true)->latest()->get();

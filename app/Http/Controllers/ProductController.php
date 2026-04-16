@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Addon;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\RawMaterial;
@@ -16,7 +17,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'rawMaterials', 'variationGroups']);
+        $query = Product::with(['category', 'rawMaterials', 'variationGroups', 'addons']);
 
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%')
@@ -31,8 +32,9 @@ class ProductController extends Controller
         $categories = Category::orderBy('name')->get();
         $rawMaterials = RawMaterial::orderBy('name')->get(['id', 'name', 'unit', 'cost_per_unit']);
         $variationGroups = \App\Models\VariationGroup::with('options')->get();
+        $addonsList = Addon::orderBy('name')->get();
 
-        return view('products.index', compact('products', 'categories', 'rawMaterials', 'variationGroups'));
+        return view('products.index', compact('products', 'categories', 'rawMaterials', 'variationGroups', 'addonsList'));
     }
 
     /**
@@ -56,6 +58,8 @@ class ProductController extends Controller
             'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0',
             'variation_groups' => 'nullable|array',
             'variation_groups.*' => 'exists:variation_groups,id',
+            'addons' => 'nullable|array',
+            'addons.*' => 'exists:addons,id',
         ]);
 
         if ($request->hasFile('image')) {
@@ -94,6 +98,14 @@ class ProductController extends Controller
             $product->variationGroups()->sync($syncData);
         }
 
+        if ($request->has('addons')) {
+            $syncData = [];
+            foreach ($request->addons as $index => $addonId) {
+                $syncData[$addonId] = ['sort_order' => $index];
+            }
+            $product->addons()->sync($syncData);
+        }
+
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
 
@@ -128,6 +140,8 @@ class ProductController extends Controller
                 'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0',
                 'variation_groups' => 'nullable|array',
                 'variation_groups.*' => 'exists:variation_groups,id',
+                'addons' => 'nullable|array',
+                'addons.*' => 'exists:addons,id',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             dd($e->errors(), $request->all());
@@ -176,6 +190,16 @@ class ProductController extends Controller
             $product->variationGroups()->sync($syncData);
         } else {
             $product->variationGroups()->sync([]);
+        }
+
+        if ($request->has('addons')) {
+            $syncData = [];
+            foreach ($request->addons as $index => $addonId) {
+                $syncData[$addonId] = ['sort_order' => $index];
+            }
+            $product->addons()->sync($syncData);
+        } else {
+            $product->addons()->sync([]);
         }
 
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');

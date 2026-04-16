@@ -35,4 +35,12 @@ class TransactionItem extends Model
     {
         return $this->hasMany(TransactionItemVariation::class);
     }
+
+    /**
+     * Get the historical addons selected for this transaction item.
+     */
+    public function addons()
+    {
+        return $this->hasMany(TransactionItemAddon::class);
+    }
 }

@@ -374,13 +374,25 @@ class BluetoothPrinter {
                     // Variations
                     if (item.variations && item.variations.length > 0) {
                         item.variations.forEach(v => {
-                            let optionText = `  + ${v.option}`;
-                            let priceText = v.price_modifier > 0 ? `+${fmtRp(v.price_modifier)}` : '';
+                            let pm = parseFloat(v.price_modifier || 0);
+                            let sign = pm < 0 ? '-' : '+';
+                            let optionText = `  ${sign} ${v.option}`;
+                            let priceText = pm !== 0 ? `${pm > 0 ? '+' : ''}${fmtRp(pm)}` : '';
                             add(this.formatLine(optionText, priceText) + "\n");
                         });
                     }
 
-                    if (item.notes) add(`  * ${item.notes.substring(0, 28)}\n`);
+                    // Addons
+                    if (item.addons && item.addons.length > 0) {
+                        item.addons.forEach(a => {
+                            let qtyAddon = a.quantity > 1 ? `${a.quantity}x ` : '';
+                            let addonLabel = `  * ${qtyAddon}${a.name}`;
+                            let priceText = a.price > 0 ? `+${fmtRp(a.price * a.quantity)}` : '';
+                            add(this.formatLine(addonLabel, priceText) + "\n");
+                        });
+                    }
+
+                    if (item.notes) add(`  Catatan: ${item.notes.substring(0, 21)}\n`);
 
                     const qtyPrice = `  ${item.quantity}x ${fmtRp(item.price)}`;
                     const subtotal = fmtRp(item.subtotal);

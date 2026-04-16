@@ -46,9 +46,17 @@ class FinanceController extends Controller
 
         // 2. COGS (Cost of Goods Sold)
         $transactionIds = $transactions->pluck('id');
-        $items = TransactionItem::with('product')->whereIn('transaction_id', $transactionIds)->get();
+        $items = TransactionItem::with(['product', 'addons', 'variations'])->whereIn('transaction_id', $transactionIds)->get();
         $cogs = $items->sum(function ($item) {
-            return $item->quantity * ($item->product->cost_price ?? 0);
+            $baseCost = $item->product->cost_price ?? 0;
+            $variationCostModifier = $item->variations ? $item->variations->sum('cost_modifier') : 0;
+            $adjustedCost = max(0, $baseCost + $variationCostModifier);
+            $productCost = $item->quantity * $adjustedCost;
+
+            $addonCost = $item->addons->sum(function($addon) use ($item) {
+                return $addon->quantity * $item->quantity * $addon->cost_price;
+            });
+            return $productCost + $addonCost;
         });
 
         // 3. Wastage Loss
@@ -157,9 +165,17 @@ class FinanceController extends Controller
         $netSales = $grossSales - $discounts; // Note: transactions.net_sales exists but sum directly is safer due to partials
 
         $transactionIds = $transactions->pluck('id');
-        $items = TransactionItem::with('product')->whereIn('transaction_id', $transactionIds)->get();
+        $items = TransactionItem::with(['product', 'addons', 'variations'])->whereIn('transaction_id', $transactionIds)->get();
         $cogs = $items->sum(function ($item) {
-            return $item->quantity * ($item->product->cost_price ?? 0);
+            $baseCost = $item->product->cost_price ?? 0;
+            $variationCostModifier = $item->variations ? $item->variations->sum('cost_modifier') : 0;
+            $adjustedCost = max(0, $baseCost + $variationCostModifier);
+            $productCost = $item->quantity * $adjustedCost;
+            
+            $addonCost = $item->addons->sum(function($addon) use ($item) {
+                return $addon->quantity * $item->quantity * $addon->cost_price;
+            });
+            return $productCost + $addonCost;
         });
 
         // Wastage Loss

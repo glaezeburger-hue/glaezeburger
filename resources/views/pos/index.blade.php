@@ -57,6 +57,7 @@
                 showVariationModal: false,
                 activeProduct: null,
                 activeVariations: {},
+                activeAddons: [],
                 variationError: '',
                 qrisString: '',
                 qrisLoading: false,
@@ -134,17 +135,19 @@
                 },
 
                 addToCart(product) {
-                    if (product.variation_groups && product.variation_groups.length > 0) {
+                    const hasVariations = product.variation_groups && product.variation_groups.length > 0;
+                    const hasAddons = product.addons && product.addons.length > 0;
+                    if (hasVariations || hasAddons) {
                         this.openVariationModal(product);
                         return;
                     }
-                    this.processAddToCart(product, null);
+                    this.processAddToCart(product, null, []);
                 },
 
-                processAddToCart(product, variations) {
-                    const cartKey = this.generateCartItemKey(product, variations);
+                processAddToCart(product, variations, addons) {
+                    const cartKey = this.generateCartItemKey(product, variations, addons);
                     const existingIndex = this.cart.findIndex(item => item.cartKey === cartKey);
-                    const availability = this.checkStockAvailability(product, 1);
+                    const availability = this.checkStockAvailability(product, 1, addons);
                     
                     if (existingIndex > -1) {
                         if (availability.canAdd) {
@@ -167,7 +170,8 @@
                                 quantity: 1, 
                                 notes: '',
                                 cartKey: cartKey,
-                                variations: variations
+                                variations: variations,
+                                addons_selected: addons || []
                             });
                             this.playAddSound();
                             this.showVariationModal = false;
@@ -182,21 +186,29 @@
                     }
                 },
 
-                generateCartItemKey(product, variations) {
-                    if (!variations || Object.keys(variations).length === 0) return product.id.toString();
-                    
+                generateCartItemKey(product, variations, addons) {
                     let keyStr = product.id.toString() + '-';
-                    const groupIds = Object.keys(variations).sort();
-                    
-                    groupIds.forEach(gid => {
-                        keyStr += `g${gid}:`;
-                        const selected = [...variations[gid].selected].sort();
-                        if(selected.length > 0) {
-                            keyStr += selected.join(',') + '-';
-                        } else {
-                            keyStr += 'none-';
-                        }
-                    });
+                    if (variations && Object.keys(variations).length > 0) {
+                        const groupIds = Object.keys(variations).sort();
+                        
+                        groupIds.forEach(gid => {
+                            keyStr += `g${gid}:`;
+                            const selected = [...variations[gid].selected].sort();
+                            if(selected.length > 0) {
+                                keyStr += selected.join(',') + '-';
+                            } else {
+                                keyStr += 'none-';
+                            }
+                        });
+                    } else {
+                        keyStr += 'v:none-';
+                    }
+
+                    if (addons && addons.length > 0) {
+                        keyStr += 'a:' + [...addons].sort().join(',') + '-';
+                    } else {
+                        keyStr += 'a:none-';
+                    }
                     
                     return keyStr;
                 },
@@ -204,6 +216,7 @@
                 openVariationModal(product) {
                     this.activeProduct = JSON.parse(JSON.stringify(product));
                     this.activeVariations = {};
+                    this.activeAddons = [];
                     this.variationError = '';
                     
                     if(this.activeProduct.variation_groups) {
@@ -229,20 +242,40 @@
                 },
 
                 get variationSubtotal() {
-                    if(!this.activeProduct || !this.activeProduct.variation_groups) return 0;
+                    if(!this.activeProduct) return 0;
                     let total = parseFloat(this.activeProduct.selling_price);
                     
-                    this.activeProduct.variation_groups.forEach(group => {
-                        const selected = this.activeVariations[group.id]?.selected || [];
-                        selected.forEach(optId => {
-                            const opt = group.options.find(o => o.id === optId);
-                            if(opt && opt.price_modifier) {
-                                total += parseFloat(opt.price_modifier);
+                    if (this.activeProduct.variation_groups) {
+                        this.activeProduct.variation_groups.forEach(group => {
+                            const selected = this.activeVariations[group.id]?.selected || [];
+                            selected.forEach(optId => {
+                                const opt = group.options.find(o => o.id === optId);
+                                if(opt && opt.price_modifier) {
+                                    total += parseFloat(opt.price_modifier);
+                                }
+                            });
+                        });
+                    }
+
+                    if (this.activeAddons && this.activeAddons.length > 0) {
+                        this.activeAddons.forEach(addonId => {
+                            const addon = this.activeProduct.addons?.find(a => a.id == addonId);
+                            if (addon && addon.selling_price) {
+                                total += parseFloat(addon.selling_price);
                             }
                         });
-                    });
+                    }
                     
                     return total;
+                },
+
+                toggleAddon(addonId) {
+                    const idx = this.activeAddons.indexOf(addonId);
+                    if (idx > -1) {
+                        this.activeAddons.splice(idx, 1);
+                    } else {
+                        this.activeAddons.push(addonId);
+                    }
                 },
 
                 toggleVariationOption(groupId, optionId) {
@@ -272,13 +305,13 @@
                         }
                     }
                     
-                    this.processAddToCart(this.activeProduct, JSON.parse(JSON.stringify(this.activeVariations)));
+                    this.processAddToCart(this.activeProduct, JSON.parse(JSON.stringify(this.activeVariations)), JSON.parse(JSON.stringify(this.activeAddons)));
                 },
 
                 increaseQty(index) {
                     const item = this.cart[index];
                     const product = this.allProducts.find(p => p.id === item.id);
-                    const availability = this.checkStockAvailability(product, 1);
+                    const availability = this.checkStockAvailability(product, 1, item.addons_selected);
 
                     if (availability.canAdd) {
                         this.cart[index].quantity++;
@@ -292,10 +325,93 @@
                     }
                 },
 
-                checkStockAvailability(product, additionalQty) {
-                    // 1. If not recipe based, check direct stock
+                checkStockAvailability(product, additionalQty, itemAddons = []) {
+                    let cartConsumptionMap = {};
+                    this.cart.forEach(item => {
+                        const q = item.quantity;
+                        if (item.is_recipe_based && item.raw_materials) {
+                            let excludedIngredients = [];
+                            if (item.variations && item.variation_groups) {
+                                Object.keys(item.variations).forEach(groupId => {
+                                    const selected = item.variations[groupId].selected || [];
+                                    const group = item.variation_groups.find(g => g.id == groupId);
+                                    if(group) {
+                                        selected.forEach(optId => {
+                                            const opt = group.options.find(o => o.id == optId);
+                                            if(opt && opt.excluded_ingredients) {
+                                                opt.excluded_ingredients.forEach(ing => excludedIngredients.push(ing.id || ing));
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            item.raw_materials.forEach(rm => {
+                                if (excludedIngredients.includes(rm.id)) return;
+                                cartConsumptionMap[rm.id] = (cartConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * q);
+                            });
+                        }
+                        if (item.addons_selected && item.addons_selected.length > 0 && item.addons) {
+                            item.addons_selected.forEach(addonId => {
+                                const addon = item.addons.find(a => a.id == addonId);
+                                if (addon && addon.raw_materials) {
+                                    addon.raw_materials.forEach(rm => {
+                                        cartConsumptionMap[rm.id] = (cartConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * q);
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                    let intendedConsumptionMap = {};
+                    if (product.is_recipe_based && product.raw_materials) {
+                        let excludedIngredients = [];
+                        if (this.activeVariations && product.variation_groups) {
+                            Object.keys(this.activeVariations).forEach(groupId => {
+                                const selected = this.activeVariations[groupId].selected || [];
+                                const group = product.variation_groups.find(g => g.id == groupId);
+                                if(group) {
+                                    selected.forEach(optId => {
+                                        const opt = group.options.find(o => o.id == optId);
+                                        if(opt && opt.excluded_ingredients) {
+                                            opt.excluded_ingredients.forEach(ing => excludedIngredients.push(ing.id || ing));
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        product.raw_materials.forEach(rm => {
+                            if (excludedIngredients.includes(rm.id)) return;
+                            intendedConsumptionMap[rm.id] = (intendedConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * additionalQty);
+                        });
+                    }
+                    if (itemAddons && itemAddons.length > 0 && product.addons) {
+                        itemAddons.forEach(addonId => {
+                            const addon = product.addons.find(a => a.id == addonId);
+                            if (addon && addon.raw_materials) {
+                                addon.raw_materials.forEach(rm => {
+                                    intendedConsumptionMap[rm.id] = (intendedConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * additionalQty);
+                                });
+                            }
+                        });
+                    }
+
+                    for (const materialId in intendedConsumptionMap) {
+                        const reqQty = intendedConsumptionMap[materialId];
+                        const matIdNum = parseInt(materialId);
+                        const material = this.rawMaterials.find(m => m.id === matIdNum);
+                        const initialStock = material ? parseFloat(material.stock) : 0;
+                        const totalReq = (cartConsumptionMap[materialId] || 0) + reqQty;
+
+                        if (totalReq > initialStock) {
+                            return {
+                                canAdd: false,
+                                message: `Insufficient ${material?.name || 'materials'}. Need ${totalReq}, only ${initialStock} available.`
+                            };
+                        }
+                    }
+
                     if (!product.is_recipe_based) {
-                        const inCart = this.cart.find(c => c.id === product.id)?.quantity || 0;
+                        const inCart = this.cart.filter(c => c.id === product.id).reduce((sum, c) => sum + c.quantity, 0);
                         const canAdd = (inCart + additionalQty) <= product.stock;
                         return { 
                             canAdd: canAdd, 
@@ -303,70 +419,64 @@
                         };
                     }
 
-                    // 2. If recipe based, check each raw material
-                    for (const ingredient of product.raw_materials) {
-                        const materialId = ingredient.id;
-                        const reqPerUnit = ingredient.pivot.quantity;
-                        
-                        // Calculate total current consumption of this material in cart
-                        let currentConsumpt = 0;
-                        this.cart.forEach(item => {
-                            const p = this.allProducts.find(prod => prod.id === item.id);
-                            if (p && p.is_recipe_based) {
-                                const ing = p.raw_materials.find(i => i.id === materialId);
-                                if (ing) {
-                                    currentConsumpt += (ing.pivot.quantity * item.quantity);
-                                }
-                            }
-                        });
-
-                        const material = this.rawMaterials.find(m => m.id === materialId);
-                        const initialStock = material ? parseFloat(material.stock) : 0;
-                        const totalReqIfAdded = currentConsumpt + (reqPerUnit * additionalQty);
-
-                        if (totalReqIfAdded > initialStock) {
-                            const remaining = initialStock - currentConsumpt;
-                            const possibleAdd = Math.floor(remaining / reqPerUnit);
-                            return {
-                                canAdd: false,
-                                message: `Insufficient ${ingredient.name}. Remaining: ${remaining} ${ingredient.unit}. You can only make ${possibleAdd} more units.`
-                            };
-                        }
-                    }
-
                     return { canAdd: true, message: '' };
                 },
 
                 getLiveStock(product) {
                     if (!product.is_recipe_based) {
-                        const inCart = this.cart.find(c => c.id === product.id)?.quantity || 0;
+                        const inCart = this.cart.filter(c => c.id === product.id).reduce((sum, c) => sum + c.quantity, 0);
                         return Math.max(0, product.stock - inCart);
                     }
+
+                    let cartConsumptionMap = {};
+                    this.cart.forEach(item => {
+                        const q = item.quantity;
+                        if (item.is_recipe_based && item.raw_materials) {
+                            let excludedIngredients = [];
+                            if (item.variations && item.variation_groups) {
+                                Object.keys(item.variations).forEach(groupId => {
+                                    const selected = item.variations[groupId].selected || [];
+                                    const group = item.variation_groups.find(g => g.id == groupId);
+                                    if(group) {
+                                        selected.forEach(optId => {
+                                            const opt = group.options.find(o => o.id == optId);
+                                            if(opt && opt.excluded_ingredients) {
+                                                opt.excluded_ingredients.forEach(ing => excludedIngredients.push(ing.id || ing));
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            item.raw_materials.forEach(rm => {
+                                if (excludedIngredients.includes(rm.id)) return;
+                                cartConsumptionMap[rm.id] = (cartConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * q);
+                            });
+                        }
+                        if (item.addons_selected && item.addons_selected.length > 0 && item.addons) {
+                            item.addons_selected.forEach(addonId => {
+                                const addon = item.addons.find(a => a.id == addonId);
+                                if (addon && addon.raw_materials) {
+                                    addon.raw_materials.forEach(rm => {
+                                        cartConsumptionMap[rm.id] = (cartConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * q);
+                                    });
+                                }
+                            });
+                        }
+                    });
 
                     const possibleQuantities = [];
                     product.raw_materials.forEach(ingredient => {
                         const materialId = ingredient.id;
                         const reqPerUnit = ingredient.pivot.quantity;
-
-                        let currentConsumpt = 0;
-                        this.cart.forEach(item => {
-                            const p = this.allProducts.find(prod => prod.id === item.id);
-                            if (p && p.is_recipe_based) {
-                                const ing = p.raw_materials.find(i => i.id === materialId);
-                                if (ing) {
-                                    currentConsumpt += (ing.pivot.quantity * item.quantity);
-                                }
-                            }
-                        });
-
                         const material = this.rawMaterials.find(m => m.id === materialId);
                         const initialStock = material ? parseFloat(material.stock) : 0;
-                        const remainingMaterial = initialStock - currentConsumpt;
+                        const consumed = cartConsumptionMap[materialId] || 0;
+                        const remainingMaterial = Math.max(0, initialStock - consumed);
 
                         possibleQuantities.push(Math.floor(remainingMaterial / reqPerUnit));
                     });
 
-                    return Math.max(0, Math.min(...possibleQuantities));
+                    return possibleQuantities.length > 0 ? Math.min(...possibleQuantities) : 0;
                 },
 
                 getItemUnitPrice(item) {
@@ -380,6 +490,14 @@
                                     price += parseFloat(opt.price_modifier);
                                 }
                             });
+                        });
+                    }
+                    if (item.addons_selected && item.addons_selected.length > 0) {
+                        item.addons_selected.forEach(addonId => {
+                            const addon = item.addons?.find(a => a.id == addonId);
+                            if (addon && addon.selling_price) {
+                                price += parseFloat(addon.selling_price);
+                            }
                         });
                     }
                     return price;
@@ -477,6 +595,14 @@
                                         itemPrice += parseFloat(opt.price_modifier);
                                     }
                                 });
+                            });
+                        }
+                        if (item.addons_selected && item.addons_selected.length > 0) {
+                            item.addons_selected.forEach(addonId => {
+                                const addon = item.addons?.find(a => a.id == addonId);
+                                if (addon && addon.selling_price) {
+                                    itemPrice += parseFloat(addon.selling_price);
+                                }
                             });
                         }
                         return sum + (itemPrice * item.quantity);
@@ -603,7 +729,8 @@
                                     id: item.id, 
                                     quantity: item.quantity,
                                     notes: item.notes || null,
-                                    variations: item.variations || null
+                                    variations: item.variations || null,
+                                    addons: (item.addons_selected || []).map(addonId => ({ id: addonId, quantity: 1 }))
                                 })),
                                 apply_tax: this.applyTax,
                                 discount_type: this.discountType,
@@ -1430,6 +1557,38 @@
                             </div>
                         </div>
                     </template>
+
+                    <template x-if="activeProduct?.addons && activeProduct.addons.length > 0">
+                        <div class="space-y-3 pt-4 border-t border-gray-100 mt-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-[13px] font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                                    <span>Add-ons</span>
+                                </h3>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-lg">Pilih Banyak</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-2">
+                                <template x-for="addon in activeProduct.addons" :key="addon.id">
+                                    <label class="flex items-center justify-between p-3 border rounded-xl cursor-pointer transition-all hover:bg-gray-50 group/opt"
+                                        :class="activeAddons.includes(addon.id) ? 'border-smash-blue bg-blue-50/30' : 'border-gray-100'">
+                                        <div class="flex items-center gap-3">
+                                            <!-- Checkbox visual -->
+                                            <div class="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-[4px] border-2 transition-colors"
+                                                :class="activeAddons.includes(addon.id) ? 'border-smash-blue bg-smash-blue text-white' : 'border-gray-300'">
+                                                <svg x-show="activeAddons.includes(addon.id)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            </div>
+                                            <span class="text-sm font-black text-gray-700 uppercase tracking-tight" x-text="addon.name"></span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[11px] font-black text-smash-blue" x-text="'+' + formatPrice(addon.selling_price)"></span>
+                                        </div>
+                                        <!-- Hidden input -->
+                                        <input type="checkbox" class="hidden" @change="toggleAddon(addon.id)" :checked="activeAddons.includes(addon.id)">
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Modal Footer -->
@@ -1499,18 +1658,27 @@
                         <div class="flex-1 min-w-0 pt-0.5">
                             <h4 class="text-[13px] font-black text-gray-900 uppercase tracking-tight line-clamp-1 leading-none" x-text="item.name"></h4>
                             
-                            <!-- Variations Badges -->
-                            <template x-if="item.variations && Object.keys(item.variations).length > 0">
-                                <div class="mt-1 flex flex-wrap gap-1">
+                            <!-- Variations and Addons Badges -->
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                <template x-if="item.variations && Object.keys(item.variations).length > 0">
                                     <template x-for="groupId in Object.keys(item.variations)" :key="groupId">
                                         <template x-for="optId in item.variations[groupId].selected" :key="optId">
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 text-smash-blue text-[9px] font-black uppercase tracking-wider">
-                                                <span x-text="item.variation_groups.find(g => g.id == groupId)?.options.find(o => o.id == optId)?.short_name || item.variation_groups.find(g => g.id == groupId)?.options.find(o => o.id == optId)?.name"></span>
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-50 text-gray-600 border border-gray-100 text-[9px] font-black tracking-wider">
+                                                <span class="mr-0.5 font-bold text-gray-400">+</span>
+                                                <span class="uppercase" x-text="item.variation_groups.find(g => g.id == groupId)?.options.find(o => o.id == optId)?.short_name || item.variation_groups.find(g => g.id == groupId)?.options.find(o => o.id == optId)?.name"></span>
                                             </span>
                                         </template>
                                     </template>
-                                </div>
-                            </template>
+                                </template>
+                                <template x-if="item.addons_selected && item.addons_selected.length > 0">
+                                    <template x-for="addonId in item.addons_selected" :key="addonId">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[9px] font-black tracking-wider">
+                                            <span class="mr-0.5 font-bold text-amber-500">★</span>
+                                            <span class="uppercase" x-text="item.addons?.find(a => a.id == addonId)?.name"></span>
+                                        </span>
+                                    </template>
+                                </template>
+                            </div>
 
                             <p class="text-smash-blue font-black text-[11px] mt-1" x-text="formatPrice(getItemUnitPrice(item))"></p>
                             <input type="text" x-model="item.notes" placeholder="Notes (e.g. Extra Spicy)" class="mt-1.5 w-full text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-smash-blue/20 placeholder-gray-300 transition-all uppercase tracking-widest">

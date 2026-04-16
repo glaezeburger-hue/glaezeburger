@@ -15,7 +15,7 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with(['items.product', 'user', 'voucher']);
+        $query = Transaction::with(['items.product', 'items.addons', 'user', 'voucher']);
 
         // Search by invoice number or customer name
         if ($request->filled('search')) {
@@ -87,7 +87,7 @@ class TransactionController extends Controller
      */
     public function show(Transaction $transaction)
     {
-        $transaction->load(['items.product', 'user', 'voucher']);
+        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user', 'voucher']);
 
         return response()->json([
             'id' => $transaction->id,
@@ -116,6 +116,11 @@ class TransactionController extends Controller
                 'variations' => $item->variations->map(fn($var) => [
                     'group' => $var->variation_name,
                     'option' => $var->option_name
+                ]),
+                'addons' => $item->addons->map(fn($addon) => [
+                    'name' => $addon->addon_name,
+                    'price' => $addon->selling_price,
+                    'quantity' => $addon->quantity
                 ]),
             ]),
         ]);
@@ -161,6 +166,9 @@ class TransactionController extends Controller
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.notes' => 'nullable|string|max:255',
             'cart.*.variations' => 'nullable|array',
+            'cart.*.addons' => 'nullable|array',
+            'cart.*.addons.*.id' => 'required_with:cart.*.addons|exists:addons,id',
+            'cart.*.addons.*.quantity' => 'required_with:cart.*.addons|integer|min:1',
             'apply_tax' => 'boolean',
             'discount_type' => 'nullable|in:percentage,nominal',
             'discount_value' => 'nullable|numeric|min:0',
@@ -199,20 +207,26 @@ class TransactionController extends Controller
                 // Calculate Variation Price Modifiers
                 $variationSubtotal = 0;
                 $selectedVariations = []; 
+                $itemExcludedIngredients = [];
                 if (isset($item['variations']) && is_array($item['variations'])) {
                     foreach ($item['variations'] as $groupId => $groupData) {
                         if (isset($groupData['selected']) && is_array($groupData['selected'])) {
                             foreach ($groupData['selected'] as $optionId) {
-                                $option = \App\Models\VariationOption::find($optionId);
+                                $option = \App\Models\VariationOption::with('excludedIngredients')->find($optionId);
                                 if ($option) {
                                     $variationSubtotal += $option->price_modifier;
                                     $group = \App\Models\VariationGroup::find($groupId);
                                     
+                                    $excludedIds = $option->excludedIngredients->pluck('id')->toArray();
+                                    $itemExcludedIngredients = array_values(array_unique(array_merge($itemExcludedIngredients, $excludedIds)));
+
                                     $selectedVariations[] = [
                                         'variation_option_id' => $optionId,
                                         'variation_name' => $group ? $group->name : '',
                                         'option_name' => $option->short_name ?: $option->name,
                                         'price_modifier' => $option->price_modifier,
+                                        'cost_modifier' => $option->cost_modifier,
+                                        'excluded_ingredient_ids' => json_encode($excludedIds),
                                         'created_at' => $timestamp,
                                         'updated_at' => $timestamp,
                                     ];
@@ -222,9 +236,46 @@ class TransactionController extends Controller
                     }
                 }
 
+                // Calculate Addons Price Modifiers
+                $addonsSubtotal = 0;
+                $selectedAddons = [];
+                if (isset($item['addons']) && is_array($item['addons'])) {
+                    foreach ($item['addons'] as $addonData) {
+                       $addonId = $addonData['id'];
+                       $addonQty = (int)$addonData['quantity'];
+                       $addon = \App\Models\Addon::with('rawMaterials')->find($addonId);
+                       if ($addon) {
+                           $addonsSubtotal += ($addon->selling_price * $addonQty);
+                           $selectedAddons[] = [
+                               'addon_id' => $addon->id,
+                               'addon_name' => $addon->name,
+                               'selling_price' => $addon->selling_price,
+                               'cost_price' => $addon->cost_price,
+                               'quantity' => $addonQty,
+                               'created_at' => $timestamp,
+                               'updated_at' => $timestamp,
+                           ];
+                           
+                           // Check ingredients stock for addon
+                           foreach ($addon->rawMaterials as $ingredient) {
+                               $needed = $ingredient->pivot->quantity * $addonQty * $item['quantity'];
+                               $tempRawMaterialUsage[$ingredient->id] = ($tempRawMaterialUsage[$ingredient->id] ?? 0) + $needed;
+                               $rawMaterial = \App\Models\RawMaterial::lockForUpdate()->find($ingredient->id);
+                               if ($rawMaterial->stock < $tempRawMaterialUsage[$ingredient->id]) {
+                                   throw new \Exception("Ingredient {$rawMaterial->name} stock insufficient for the total order (including addons).");
+                               }
+                           }
+                       }
+                    }
+                }
+
                 if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
                     // Check each raw material has enough stock
                     foreach ($product->rawMaterials as $ingredient) {
+                        if (in_array($ingredient->id, $itemExcludedIngredients)) {
+                            continue; // Skip tracking and locking for excluded ingredients
+                        }
+                        
                         $needed = $ingredient->pivot->quantity * $item['quantity'];
                         
                         // Track cumulative usage for this specific material
@@ -244,7 +295,7 @@ class TransactionController extends Controller
                     }
                 }
 
-                $finalPrice = $product->selling_price + $variationSubtotal;
+                $finalPrice = $product->selling_price + $variationSubtotal + $addonsSubtotal;
                 $itemSubtotal = $finalPrice * $item['quantity'];
                 $subtotal += $itemSubtotal;
 
@@ -255,7 +306,8 @@ class TransactionController extends Controller
                     'subtotal' => $itemSubtotal,
                     'notes' => $item['notes'] ?? null,
                     'product_model' => $product,
-                    'variations' => $selectedVariations
+                    'variations' => $selectedVariations,
+                    'addons' => $selectedAddons
                 ];
             }
 
@@ -357,9 +409,42 @@ class TransactionController extends Controller
                     \App\Models\TransactionItemVariation::insert($varsToInsert);
                 }
 
+                if (!empty($itemData['addons'])) {
+                    $addonsToInsert = array_map(function($addon) use ($tItem) {
+                        $addon['transaction_item_id'] = $tItem->id;
+                        return $addon;
+                    }, $itemData['addons']);
+                    
+                    \App\Models\TransactionItemAddon::insert($addonsToInsert);
+                    
+                    // Deduct stock for addons
+                    foreach ($itemData['addons'] as $addonData) {
+                        $addon = \App\Models\Addon::with('rawMaterials')->find($addonData['addon_id']);
+                        if ($addon && $addon->rawMaterials->isNotEmpty()) {
+                            foreach ($addon->rawMaterials as $ingredient) {
+                                \App\Models\RawMaterial::where('id', $ingredient->id)
+                                    ->decrement('stock', $ingredient->pivot->quantity * $addonData['quantity'] * $itemData['quantity']);
+                            }
+                        }
+                    }
+                }
+
                 // Deduct stock
                 if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
+                    $itemExcludedIngredients = [];
+                    if (!empty($itemData['variations'])) {
+                        foreach ($itemData['variations'] as $v) {
+                            $dec = json_decode($v['excluded_ingredient_ids'] ?? '[]', true);
+                            if (is_array($dec)) {
+                                $itemExcludedIngredients = array_merge($itemExcludedIngredients, $dec);
+                            }
+                        }
+                    }
+
                     foreach ($product->rawMaterials as $ingredient) {
+                        if (in_array($ingredient->id, $itemExcludedIngredients)) {
+                            continue;
+                        }
                         \App\Models\RawMaterial::where('id', $ingredient->id)
                             ->decrement('stock', $ingredient->pivot->quantity * $itemData['quantity']);
                     }
@@ -391,7 +476,7 @@ class TransactionController extends Controller
      */
     public function showReceipt(Transaction $transaction)
     {
-        $transaction->load(['items.product', 'items.variations', 'user']);
+        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user']);
         return view('pos.receipt', compact('transaction'));
     }
 
@@ -400,7 +485,7 @@ class TransactionController extends Controller
      */
     public function receiptData(Transaction $transaction)
     {
-        $transaction->load(['items.product', 'items.variations', 'user', 'voucher']);
+        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user', 'voucher']);
 
         return response()->json([
             'id' => $transaction->id,
@@ -426,6 +511,11 @@ class TransactionController extends Controller
                         'group' => $var->variation_name,
                         'option' => $var->option_name,
                         'price_modifier' => $var->price_modifier
+                    ])->toArray(),
+                    'addons' => $item->addons->map(fn($addon) => [
+                        'name' => $addon->addon_name,
+                        'price' => $addon->selling_price,
+                        'quantity' => $addon->quantity
                     ])->toArray(),
                 ];
             })
@@ -564,12 +654,39 @@ class TransactionController extends Controller
                     $product = $item->product;
                     if ($product) {
                         if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
+                            $itemExcludedIngredients = [];
+                            foreach ($item->variations as $var) {
+                                $arr = $var->excluded_ingredient_ids;
+                                if (is_string($arr)) {
+                                    $arr = json_decode($arr, true);
+                                }
+                                if (is_array($arr)) {
+                                    $itemExcludedIngredients = array_merge($itemExcludedIngredients, $arr);
+                                }
+                            }
+
                             foreach ($product->rawMaterials as $ingredient) {
+                                if (in_array($ingredient->id, $itemExcludedIngredients)) {
+                                    continue;
+                                }
                                 \App\Models\RawMaterial::where('id', $ingredient->id)
                                     ->increment('stock', $ingredient->pivot->quantity * $item->quantity);
                             }
                         } else {
                             $product->increment('stock', $item->quantity);
+                        }
+                    }
+                    
+                    // Restore stock for addons
+                    if ($item->addons->isNotEmpty()) {
+                        foreach ($item->addons as $addonItem) {
+                            $addon = \App\Models\Addon::with('rawMaterials')->find($addonItem->addon_id);
+                            if ($addon && $addon->rawMaterials->isNotEmpty()) {
+                                foreach ($addon->rawMaterials as $ingredient) {
+                                    \App\Models\RawMaterial::where('id', $ingredient->id)
+                                        ->increment('stock', $ingredient->pivot->quantity * $addonItem->quantity * $item->quantity);
+                                }
+                            }
                         }
                     }
                 }

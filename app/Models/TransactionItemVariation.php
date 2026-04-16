@@ -12,11 +12,15 @@ class TransactionItemVariation extends Model
         'variation_option_id',
         'variation_name',
         'option_name',
-        'price_modifier'
+        'price_modifier',
+        'cost_modifier',
+        'excluded_ingredient_ids'
     ];
 
     protected $casts = [
-        'price_modifier' => 'decimal:2'
+        'price_modifier' => 'decimal:2',
+        'cost_modifier' => 'decimal:2',
+        'excluded_ingredient_ids' => 'array'
     ];
 
     public function transactionItem(): BelongsTo

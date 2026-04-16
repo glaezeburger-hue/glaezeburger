@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\VariationGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\RawMaterial;
 
 class VariationController extends Controller
 {
@@ -13,7 +14,7 @@ class VariationController extends Controller
      */
     public function index(Request $request)
     {
-        $query = VariationGroup::with('options');
+        $query = VariationGroup::with(['options', 'options.excludedIngredients']);
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
@@ -25,7 +26,18 @@ class VariationController extends Controller
 
         $variationGroups = $query->latest()->paginate(10)->withQueryString();
 
-        return view('variations.index', compact('variationGroups'));
+        $variationGroups->getCollection()->transform(function ($group) {
+            $group->options->transform(function ($option) {
+                $option->setAttribute('excluded_ingredients', $option->excludedIngredients->pluck('id')->toArray());
+                $option->unsetRelation('excludedIngredients');
+                return $option;
+            });
+            return $group;
+        });
+
+        $rawMaterials = RawMaterial::orderBy('name')->get();
+
+        return view('variations.index', compact('variationGroups', 'rawMaterials'));
     }
 
     /**
@@ -40,8 +52,11 @@ class VariationController extends Controller
             'options' => 'required|array|min:1',
             'options.*.name' => 'required|string|max:255',
             'options.*.short_name' => 'nullable|string|max:50',
-            'options.*.price_modifier' => 'nullable|numeric|min:0',
+            'options.*.price_modifier' => 'nullable|numeric',
+            'options.*.cost_modifier' => 'nullable|numeric',
             'options.*.is_default' => 'boolean',
+            'options.*.excluded_ingredients' => 'nullable|array',
+            'options.*.excluded_ingredients.*' => 'exists:raw_materials,id'
         ]);
 
         DB::transaction(function () use ($request) {
@@ -53,13 +68,18 @@ class VariationController extends Controller
 
             foreach ($request->options as $index => $opt) {
                 // For single type, only one option can be default. We handle this below.
-                $group->options()->create([
+                $newOption = $group->options()->create([
                     'name' => $opt['name'],
                     'short_name' => $opt['short_name'] ?? null,
                     'price_modifier' => $opt['price_modifier'] ?? 0,
+                    'cost_modifier' => $opt['cost_modifier'] ?? 0,
                     'is_default' => isset($opt['is_default']) && $opt['is_default'] == 1,
                     'sort_order' => $index,
                 ]);
+
+                if (!empty($opt['excluded_ingredients'])) {
+                    $newOption->excludedIngredients()->attach($opt['excluded_ingredients'], ['action' => 'exclude']);
+                }
             }
 
             // Enforce single default for 'single' type group
@@ -95,8 +115,11 @@ class VariationController extends Controller
             'options.*.id' => 'nullable|exists:variation_options,id',
             'options.*.name' => 'required|string|max:255',
             'options.*.short_name' => 'nullable|string|max:50',
-            'options.*.price_modifier' => 'nullable|numeric|min:0',
+            'options.*.price_modifier' => 'nullable|numeric',
+            'options.*.cost_modifier' => 'nullable|numeric',
             'options.*.is_default' => 'boolean',
+            'options.*.excluded_ingredients' => 'nullable|array',
+            'options.*.excluded_ingredients.*' => 'exists:raw_materials,id'
         ]);
 
         DB::transaction(function () use ($request, $variation) {
@@ -119,10 +142,17 @@ class VariationController extends Controller
                             'name' => $opt['name'],
                             'short_name' => $opt['short_name'] ?? null,
                             'price_modifier' => $opt['price_modifier'] ?? 0,
+                            'cost_modifier' => $opt['cost_modifier'] ?? 0,
                             'is_default' => $isDefault,
                             'sort_order' => $index,
                         ]);
                         $existingIds[] = $option->id;
+
+                        if (!empty($opt['excluded_ingredients'])) {
+                            $option->excludedIngredients()->syncWithPivotValues($opt['excluded_ingredients'], ['action' => 'exclude']);
+                        } else {
+                            $option->excludedIngredients()->detach();
+                        }
                     }
                 } else {
                     // Create new
@@ -130,10 +160,15 @@ class VariationController extends Controller
                         'name' => $opt['name'],
                         'short_name' => $opt['short_name'] ?? null,
                         'price_modifier' => $opt['price_modifier'] ?? 0,
+                        'cost_modifier' => $opt['cost_modifier'] ?? 0,
                         'is_default' => $isDefault,
                         'sort_order' => $index,
                     ]);
                     $existingIds[] = $newOption->id;
+
+                    if (!empty($opt['excluded_ingredients'])) {
+                        $newOption->excludedIngredients()->attach($opt['excluded_ingredients'], ['action' => 'exclude']);
+                    }
                 }
             }
 

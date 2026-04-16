@@ -151,4 +151,15 @@ class Product extends Model
                     ->orderByPivot('sort_order', 'asc')
                     ->withTimestamps();
     }
+
+    /**
+     * Relationship: A product can have many addons.
+     */
+    public function addons()
+    {
+        return $this->belongsToMany(Addon::class, 'product_addon')
+                    ->withPivot('sort_order')
+                    ->orderByPivot('sort_order', 'asc')
+                    ->withTimestamps();
+    }
 }

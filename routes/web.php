@@ -61,6 +61,10 @@ Route::middleware('auth')->group(function () {
 
         // Variations
         Route::resource('variations', VariationController::class)->except(['create', 'edit', 'show']);
+
+        // Add-ons
+        Route::resource('addons', \App\Http\Controllers\AddonController::class)->except(['create', 'edit', 'show']);
+        Route::post('addons/sync-costs', [\App\Http\Controllers\AddonController::class, 'syncAllCosts'])->name('addons.sync-costs');
         
         // Vouchers
         Route::resource('vouchers', VoucherController::class)->except(['show']);

@@ -14,11 +14,11 @@
         name: @js(old('name', '')),
         type: @js(old('type', 'single')),
         is_required: @js(old('is_required', false)),
-        options: @js(old('options', [['id' => '', 'name' => '', 'short_name' => '', 'price_modifier' => 0, 'is_default' => false]]))
+        options: @js(old('options', [['id' => '', 'name' => '', 'short_name' => '', 'price_modifier' => 0, 'cost_modifier' => 0, 'excluded_ingredients' => [], 'is_default' => false]]))
     },
 
     addOption() {
-        this.group.options.push({ id: '', name: '', short_name: '', price_modifier: 0, is_default: false });
+        this.group.options.push({ id: '', name: '', short_name: '', price_modifier: 0, cost_modifier: 0, excluded_ingredients: [], is_default: false });
     },
     removeOption(index) {
         if(this.group.options.length > 1) {
@@ -50,7 +50,7 @@
         this.formAction = this.defaultEndpoint;
         this.group = { 
             id: '', name: '', type: 'single', is_required: false, 
-            options: [{ id: '', name: '', short_name: '', price_modifier: 0, is_default: false }] 
+            options: [{ id: '', name: '', short_name: '', price_modifier: 0, cost_modifier: 0, excluded_ingredients: [], is_default: false }] 
         };
         this.showModal = true;
     },
@@ -67,8 +67,10 @@
                 name: o.name,
                 short_name: o.short_name || '',
                 price_modifier: parseFloat(o.price_modifier),
+                cost_modifier: parseFloat(o.cost_modifier || 0),
+                excluded_ingredients: o.excluded_ingredients ? o.excluded_ingredients.map(ing => ing.id) : [],
                 is_default: o.is_default ? true : false
-            })) : [{ id: '', name: '', short_name: '', price_modifier: 0, is_default: false }]
+            })) : [{ id: '', name: '', short_name: '', price_modifier: 0, cost_modifier: 0, excluded_ingredients: [], is_default: false }]
         };
         this.showModal = true;
     }
@@ -142,6 +144,8 @@
                                             {{ $opt->name }} 
                                             @if($opt->price_modifier > 0)
                                                 <span class="text-green-600 ml-1">+{{ number_format($opt->price_modifier, 0, ',', '.') }}</span>
+                                            @elseif($opt->price_modifier < 0)
+                                                <span class="text-red-500 ml-1">{{ number_format($opt->price_modifier, 0, ',', '.') }}</span>
                                             @endif
                                         </span>
                                     @endforeach
@@ -288,7 +292,7 @@
 
                                     <div class="space-y-3">
                                         <template x-for="(opt, index) in group.options" :key="index">
-                                            <div class="flex flex-col gap-2 p-3 bg-white border border-gray-100 rounded-2xl transition-all shadow-sm">
+                                            <div class="flex flex-col gap-2 p-4 md:p-5 bg-white border border-gray-100 rounded-2xl transition-all shadow-sm">
                                                 
                                                 <input type="hidden" :name="'options['+index+'][id]'" x-model="opt.id">
                                                 
@@ -303,41 +307,68 @@
                                                     </button>
                                                 </div>
 
-                                                <!-- Bottom Row: Short Name, Price, Default -->
-                                                <div class="flex items-center justify-between gap-2 pt-1">
+                                                <!-- Bottom Row: Short Name, Price, Cost, Default -->
+                                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
                                                     <!-- Short Name -->
-                                                    <div class="flex-1">
-                                                        <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 pl-1">Nama Struk</label>
+                                                    <div class="col-span-2 lg:col-span-1">
+                                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 pl-1">Nama Struk</label>
                                                         <input type="text" :name="'options['+index+'][short_name]'" x-model="opt.short_name" placeholder="Opt"
-                                                            class="block w-full border-gray-100 rounded-lg focus:border-smash-blue focus:ring-smash-blue px-2 py-1.5 text-[11px] font-bold bg-gray-50/50">
+                                                            class="block w-full border-gray-100 rounded-xl focus:border-smash-blue focus:ring-smash-blue px-3 py-2 text-xs font-bold bg-gray-50/50 transition-all">
                                                     </div>
 
                                                     <!-- Price Modifier -->
-                                                    <div class="flex-1">
-                                                        <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 pl-1">Harga (+)</label>
+                                                    <div class="col-span-1">
+                                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 pl-1" title="Negative value deducts price">Harga (+/-)</label>
                                                         <div class="relative">
-                                                            <span class="absolute inset-y-0 left-0 pl-2 lg:pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold text-[10px] md:text-[11px]">Rp</span>
-                                                            <input type="number" :name="'options['+index+'][price_modifier]'" x-model="opt.price_modifier" placeholder="0" min="0"
-                                                                class="block w-full pl-6 md:pl-7 lg:pl-8 pr-1 py-1.5 border-gray-100 rounded-lg focus:border-smash-blue focus:ring-smash-blue text-[11px] lg:text-[12px] font-bold bg-gray-50/50">
+                                                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold text-[11px]">Rp</span>
+                                                            <input type="number" step="any" :name="'options['+index+'][price_modifier]'" x-model="opt.price_modifier" placeholder="0"
+                                                                class="block w-full pl-10 pr-3 py-2 border-gray-100 rounded-xl focus:border-smash-blue focus:ring-smash-blue text-xs font-bold bg-gray-50/50 transition-all"
+                                                                :class="parseFloat(opt.price_modifier) < 0 ? 'text-red-500' : 'text-gray-900'">
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Cost Modifier -->
+                                                    <div class="col-span-1">
+                                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 pl-1" title="Negative value deducts COGS/HPP">HPP (+/-)</label>
+                                                        <div class="relative">
+                                                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 font-bold text-[11px]">Rp</span>
+                                                            <input type="number" step="any" :name="'options['+index+'][cost_modifier]'" x-model="opt.cost_modifier" placeholder="0"
+                                                                class="block w-full pl-10 pr-3 py-2 border-gray-100 rounded-xl focus:border-smash-blue focus:ring-smash-blue text-xs font-bold bg-gray-50/50 transition-all"
+                                                                :class="parseFloat(opt.cost_modifier) < 0 ? 'text-red-500' : 'text-gray-900'">
                                                         </div>
                                                     </div>
 
                                                     <!-- Default Checkbox -->
-                                                    <div class="flex flex-col items-center justify-center pl-2">
-                                                        <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Set Default</label>
+                                                    <div class="col-span-2 lg:col-span-1 flex flex-col items-start lg:items-center justify-center bg-gray-50/30 rounded-xl p-2 border border-transparent hover:border-gray-100 transition-colors">
+                                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 lg:mb-1">Set Default</label>
                                                         <label class="flex items-center cursor-pointer">
                                                             <input type="checkbox" :name="'options['+index+'][is_default]'" value="1" x-model="opt.is_default" @change="setDefault(index)" class="sr-only peer">
-                                                            <div class="w-5 h-5 rounded border-2 border-gray-200 peer-checked:bg-smash-blue peer-checked:border-smash-blue flex items-center justify-center transition-colors relative">
+                                                            <div class="w-5 h-5 rounded border-2 border-gray-200 peer-checked:bg-smash-blue peer-checked:border-smash-blue flex items-center justify-center transition-all bg-white relative shadow-sm hover:shadow-md">
                                                                 <svg x-show="opt.is_default" class="w-3 h-3 text-white absolute" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                                             </div>
                                                         </label>
                                                     </div>
                                                 </div>
 
+                                                <!-- Excluded Ingredients -->
+                                                <div class="mt-3 bg-red-50/40 rounded-xl p-3 border border-red-50">
+                                                    <label class="block text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Abaikan Stok / Hapus Bahan Baku (Opsional)</label>
+                                                    <div class="text-[10px] text-gray-500 mb-2 leading-relaxed">
+                                                        Pilih bahan baku yang <b>TIDAK</b> akan dikurangi stoknya jika variasi ini dipilih. (Gunakan <kbd class="px-1 py-0.5 border border-gray-200 bg-white rounded shadow-sm text-gray-400 text-[8px] font-sans">CTRL/CMD + Click</kbd> untuk memilih lebih dari satu).
+                                                    </div>
+                                                    <select multiple :name="'options['+index+'][excluded_ingredients][]'" x-model="opt.excluded_ingredients" 
+                                                        class="block w-full px-3 py-2 text-xs font-semibold bg-white border-white rounded-xl focus:border-red-300 focus:ring-4 focus:ring-red-100 outline-none transition-all shadow-sm custom-scrollbar" 
+                                                        style="min-height: 80px; max-height: 140px;">
+                                                        @foreach($rawMaterials as $mat)
+                                                            <option value="{{ $mat->id }}" class="py-1 px-2 mb-0.5 hover:bg-gray-50 rounded-lg text-gray-600">{{ $mat->name }} <span class="text-gray-400 font-medium">({{ $mat->stock }} {{ $mat->unit }})</span></option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
                                             </div>
                                         </template>
                                     </div>
-                                    <p class="mt-3 text-[10px] font-medium text-gray-400">Gunakan *Struk* untuk format ringkas di mesin kasir (Maks: 50 char). Harga dihitung sebagai tambahan (Base + Modifier).</p>
+                                    <p class="mt-3 text-[10px] font-medium text-gray-400">Gunakan *Struk* untuk format ringkas di mesin kasir (Maks: 50 char). Nilai minus otomatis memotong HPP/Harga Jual dan mengecualikan stok bahan.</p>
                                 </div>
                             </div>
 

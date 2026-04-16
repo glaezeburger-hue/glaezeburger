@@ -129,9 +129,21 @@
                                     <!-- Variations -->
                                     <template x-if="item.variations && item.variations.length > 0">
                                         <div class="mt-2 flex flex-wrap gap-1 pl-13 ml-[52px]">
-                                            <template x-for="vName in item.variations" :key="vName">
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-wider">
-                                                    + <span x-text="vName"></span>
+                                            <template x-for="v in item.variations" :key="v.name">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider"
+                                                      :class="parseFloat(v.price_modifier) < 0 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'">
+                                                    <span x-text="parseFloat(v.price_modifier) < 0 ? '-' : '+'" class="mr-1"></span> <span x-text="v.name"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Addons -->
+                                    <template x-if="item.addons && item.addons.length > 0">
+                                        <div class="mt-1 flex flex-wrap gap-1 pl-13 ml-[52px]">
+                                            <template x-for="addon in item.addons" :key="addon.name">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-[9px] font-black uppercase tracking-wider border border-amber-100 shadow-sm">
+                                                    <span class="mr-1 text-amber-500">★</span> <span x-text="addon.quantity > 1 ? addon.quantity + 'x ' + addon.name : addon.name"></span>
                                                 </span>
                                             </template>
                                         </div>

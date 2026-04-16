@@ -94,9 +94,21 @@
             @foreach($item->variations as $var)
             <tr>
                 <td colspan="3" class="pb-0" style="font-size: 10px; color: #333;">
-                    + {{ $var->option_name }}
-                    @if($var->price_modifier > 0)
-                        (+{{ number_format($var->price_modifier, 0, ',', '.') }})
+                    {{ $var->price_modifier < 0 ? '-' : '+' }} {{ $var->option_name }}
+                    @if($var->price_modifier != 0)
+                        ({{ $var->price_modifier > 0 ? '+' : '' }}{{ number_format($var->price_modifier, 0, ',', '.') }})
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        @endif
+        @if($item->addons && $item->addons->count() > 0)
+            @foreach($item->addons as $addonRecord)
+            <tr>
+                <td colspan="3" class="pb-0" style="font-size: 10px; color: #333;">
+                    ★ {{ $addonRecord->quantity > 1 ? $addonRecord->quantity . 'x ' : '' }}{{ $addonRecord->addon_name }}
+                    @if($addonRecord->selling_price > 0)
+                        (+{{ number_format($addonRecord->selling_price * $addonRecord->quantity, 0, ',', '.') }})
                     @endif
                 </td>
             </tr>
@@ -104,7 +116,7 @@
         @endif
         @if($item->notes)
         <tr>
-            <td colspan="3" class="pb-0" style="font-size: 10px; font-style: italic; color: #555;">* {{ $item->notes }}</td>
+            <td colspan="3" class="pb-0" style="font-size: 10px; font-style: italic; color: #555;">Catatan: {{ $item->notes }}</td>
         </tr>
         @endif
         <tr>
