@@ -24,7 +24,7 @@ class VoucherController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'code' => 'required|string|unique:vouchers,code|regex:/^[A-Z0-9]+$/',
+            'code' => 'required|string|unique:vouchers,code|regex:/^[a-zA-Z0-9\-\_]+$/',
             'reward_type' => 'required|in:percentage,nominal,free_item',
             'reward_value' => 'required_unless:reward_type,free_item|numeric|min:0',
             'free_product_id' => 'required_if:reward_type,free_item|nullable|exists:products,id',
@@ -36,7 +36,7 @@ class VoucherController extends Controller
             'is_active' => 'boolean'
         ]);
 
-        $validated['code'] = strtoupper($validated['code']);
+        $validated['code'] = strtoupper(trim($validated['code']));
         $validated['min_purchase'] = $validated['min_purchase'] ?? 0;
         
         if ($validated['reward_type'] === 'free_item') {
@@ -56,7 +56,7 @@ class VoucherController extends Controller
     public function update(Request $request, Voucher $voucher)
     {
         $validated = $request->validate([
-            'code' => 'required|string|regex:/^[A-Z0-9]+$/|unique:vouchers,code,' . $voucher->id,
+            'code' => 'required|string|regex:/^[a-zA-Z0-9\-\_]+$/|unique:vouchers,code,' . $voucher->id,
             'reward_type' => 'required|in:percentage,nominal,free_item',
             'reward_value' => 'required_unless:reward_type,free_item|numeric|min:0',
             'free_product_id' => 'required_if:reward_type,free_item|nullable|exists:products,id',
@@ -68,7 +68,7 @@ class VoucherController extends Controller
             'is_active' => 'boolean'
         ]);
 
-        $validated['code'] = strtoupper($validated['code']);
+        $validated['code'] = strtoupper(trim($validated['code']));
         $validated['min_purchase'] = $validated['min_purchase'] ?? 0;
         
         if ($validated['reward_type'] === 'free_item') {

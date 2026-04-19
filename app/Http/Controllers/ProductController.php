@@ -123,29 +123,25 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        try {
-            $validated = $request->validate([
-                'category_id' => 'required|exists:categories,id',
-                'name' => 'required|string|max:255|unique:products,name,' . $product->id,
-                'sku' => 'required|string|unique:products,sku,' . $product->id,
-                'description' => 'nullable|string',
-                'cost_price' => 'required|numeric|min:0',
-                'selling_price' => 'required|numeric|min:0',
-                'stock' => 'nullable|integer|min:0',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'is_active' => 'boolean',
-                'is_recipe_based' => 'boolean',
-                'ingredients' => 'nullable|array',
-                'ingredients.*.id' => 'required_with:ingredients|exists:raw_materials,id',
-                'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0',
-                'variation_groups' => 'nullable|array',
-                'variation_groups.*' => 'exists:variation_groups,id',
-                'addons' => 'nullable|array',
-                'addons.*' => 'exists:addons,id',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            dd($e->errors(), $request->all());
-        }
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255|unique:products,name,' . $product->id,
+            'sku' => 'required|string|unique:products,sku,' . $product->id,
+            'description' => 'nullable|string',
+            'cost_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'stock' => 'nullable|integer|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+            'is_recipe_based' => 'boolean',
+            'ingredients' => 'nullable|array',
+            'ingredients.*.id' => 'required_with:ingredients|exists:raw_materials,id',
+            'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0',
+            'variation_groups' => 'nullable|array',
+            'variation_groups.*' => 'exists:variation_groups,id',
+            'addons' => 'nullable|array',
+            'addons.*' => 'exists:addons,id',
+        ]);
 
         if ($request->hasFile('image')) {
             // Delete old image

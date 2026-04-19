@@ -30,7 +30,7 @@ class PosController extends Controller
                 $q->where('is_active', true)->with('excludedIngredients');
             },
             'addons' => function($q) {
-                $q->where('is_active', true);
+                $q->where('is_active', true)->with('rawMaterials');
             }
         ])->where('is_active', true)->latest()->get();
         $rawMaterials = \App\Models\RawMaterial::all();

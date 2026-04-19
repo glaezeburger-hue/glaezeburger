@@ -422,6 +422,63 @@
                     return { canAdd: true, message: '' };
                 },
 
+                isAddonAvailable(addon) {
+                    if (!addon.raw_materials || addon.raw_materials.length === 0) return true;
+
+                    let cartConsumptionMap = {};
+                    this.cart.forEach(item => {
+                        const q = item.quantity;
+                        if (item.is_recipe_based && item.raw_materials) {
+                            let excludedIngredients = [];
+                            if (item.variations && item.variation_groups) {
+                                Object.keys(item.variations).forEach(groupId => {
+                                    const selected = item.variations[groupId].selected || [];
+                                    const group = item.variation_groups.find(g => g.id == groupId);
+                                    if(group) {
+                                        selected.forEach(optId => {
+                                            const opt = group.options.find(o => o.id == optId);
+                                            if(opt && opt.excluded_ingredients) {
+                                                opt.excluded_ingredients.forEach(ing => excludedIngredients.push(ing.id || ing));
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            item.raw_materials.forEach(rm => {
+                                if (excludedIngredients.includes(rm.id)) return;
+                                cartConsumptionMap[rm.id] = (cartConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * q);
+                            });
+                        }
+                        if (item.addons_selected && item.addons_selected.length > 0 && item.addons) {
+                            item.addons_selected.forEach(addonId => {
+                                const cartAddon = item.addons.find(a => a.id == addonId);
+                                if (cartAddon && cartAddon.raw_materials) {
+                                    cartAddon.raw_materials.forEach(rm => {
+                                        cartConsumptionMap[rm.id] = (cartConsumptionMap[rm.id] || 0) + (rm.pivot.quantity * q);
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                    let available = true;
+                    addon.raw_materials.forEach(ingredient => {
+                        const materialId = ingredient.id;
+                        const reqPerUnit = ingredient.pivot.quantity;
+                        const matIdNum = parseInt(materialId);
+                        const material = this.rawMaterials.find(m => m.id === matIdNum);
+                        const initialStock = material ? parseFloat(material.stock) : 0;
+                        const consumed = cartConsumptionMap[materialId] || 0;
+                        const remainingMaterial = Math.max(0, initialStock - consumed);
+
+                        if (remainingMaterial < reqPerUnit) {
+                            available = false;
+                        }
+                    });
+
+                    return available;
+                },
+
                 getLiveStock(product) {
                     if (!product.is_recipe_based) {
                         const inCart = this.cart.filter(c => c.id === product.id).reduce((sum, c) => sum + c.quantity, 0);
@@ -1569,21 +1626,27 @@
 
                             <div class="grid grid-cols-1 gap-2">
                                 <template x-for="addon in activeProduct.addons" :key="addon.id">
-                                    <label class="flex items-center justify-between p-3 border rounded-xl cursor-pointer transition-all hover:bg-gray-50 group/opt"
-                                        :class="activeAddons.includes(addon.id) ? 'border-smash-blue bg-blue-50/30' : 'border-gray-100'">
+                                    <label class="flex items-center justify-between p-3 border rounded-xl transition-all group/opt"
+                                        :class="[
+                                            activeAddons.includes(addon.id) ? 'border-smash-blue bg-blue-50/30' : 'border-gray-100',
+                                            !isAddonAvailable(addon) ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-50'
+                                        ]">
                                         <div class="flex items-center gap-3">
                                             <!-- Checkbox visual -->
                                             <div class="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-[4px] border-2 transition-colors"
                                                 :class="activeAddons.includes(addon.id) ? 'border-smash-blue bg-smash-blue text-white' : 'border-gray-300'">
                                                 <svg x-show="activeAddons.includes(addon.id)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                             </div>
-                                            <span class="text-sm font-black text-gray-700 uppercase tracking-tight" x-text="addon.name"></span>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm font-black text-gray-700 uppercase tracking-tight" x-text="addon.name"></span>
+                                                <span x-show="!isAddonAvailable(addon)" class="text-[9px] font-bold text-red-500 uppercase tracking-widest mt-0.5">Stok Habis</span>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <span class="text-[11px] font-black text-smash-blue" x-text="'+' + formatPrice(addon.selling_price)"></span>
                                         </div>
                                         <!-- Hidden input -->
-                                        <input type="checkbox" class="hidden" @change="toggleAddon(addon.id)" :checked="activeAddons.includes(addon.id)">
+                                        <input type="checkbox" class="hidden" @change="toggleAddon(addon.id)" :checked="activeAddons.includes(addon.id)" :disabled="!isAddonAvailable(addon)">
                                     </label>
                                 </template>
                             </div>
