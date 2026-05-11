@@ -7,11 +7,26 @@ use Illuminate\Http\Request;
 
 class KdsController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (!session('current_branch_id')) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Harap pilih cabang spesifik.'], 403);
+                }
+                return redirect()->route('dashboard')->with('error', 'Akses Ditolak: Anda harus memilih cabang spesifik di menu atas untuk menggunakan KDS, bukan "Semua Cabang".');
+            }
+            return $next($request);
+        });
+    }
     /**
      * Display the Kitchen Display System (KDS) view.
      */
     public function index()
     {
+        if (!session('current_branch_id')) {
+            return redirect()->route('dashboard')->with('error', 'Akses Ditolak: Anda harus memilih cabang spesifik di menu atas untuk menggunakan KDS, bukan "Semua Cabang".');
+        }
         return view('kds.index');
     }
 
@@ -36,6 +51,7 @@ class KdsController extends Controller
                             'id' => $item->id,
                             'name' => $item->product->name ?? 'Unknown',
                             'quantity' => $item->quantity,
+                            'notes' => $item->notes,
                             'variations' => $item->variations->map(fn($v) => [
                                 'name' => $v->option_name,
                                 'price_modifier' => $v->price_modifier

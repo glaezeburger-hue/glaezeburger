@@ -14,6 +14,7 @@ use App\Http\Controllers\KdsController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\VariationController;
+use App\Http\Controllers\BranchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,14 +27,14 @@ use App\Http\Controllers\VariationController;
 |
 */
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'branch'])->group(function () {
     
     // ==========================================
     // DISPATCHER ROUTE
     // ==========================================
     Route::get('/', function () {
         $role = auth()->user()->role;
-        if ($role === 'owner') {
+        if (in_array($role, ['owner', 'super_owner'])) {
             return redirect()->route('dashboard');
         } elseif ($role === 'cashier') {
             return redirect()->route('pos.index');
@@ -44,7 +45,15 @@ Route::middleware('auth')->group(function () {
     })->name('home');
 
     // ==========================================
-    // OWNER ONLY ROUTES
+    // SUPER OWNER ONLY ROUTES (Branch Management)
+    // ==========================================
+    Route::middleware('role:super_owner')->group(function () {
+        Route::resource('branches', BranchController::class)->except(['show']);
+        Route::post('branches/{branch}/toggle', [BranchController::class, 'toggleActive'])->name('branches.toggle');
+    });
+
+    // ==========================================
+    // OWNER ONLY ROUTES (Management)
     // ==========================================
     Route::middleware('role:owner')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -56,9 +65,6 @@ Route::middleware('auth')->group(function () {
         // Categories
         Route::resource('categories', CategoryController::class)->only(['index', 'store']);
         
-        // Raw Materials
-        Route::resource('raw-materials', RawMaterialController::class)->except(['create', 'edit', 'show']);
-
         // Variations
         Route::resource('variations', VariationController::class)->except(['create', 'edit', 'show']);
 
@@ -66,15 +72,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('addons', \App\Http\Controllers\AddonController::class)->except(['create', 'edit', 'show']);
         Route::post('addons/sync-costs', [\App\Http\Controllers\AddonController::class, 'syncAllCosts'])->name('addons.sync-costs');
         
-        // Vouchers
-        Route::resource('vouchers', VoucherController::class)->except(['show']);
-        
-        // Order History
-        Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
+        // Transaction Management (Delete & Import)
         Route::get('transactions/import', [TransactionController::class, 'importForm'])->name('transactions.import');
         Route::post('transactions/import', [TransactionController::class, 'importStore'])->name('transactions.import.store');
-        Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
-        Route::patch('transactions/{transaction}/status', [TransactionController::class, 'updateStatus'])->name('transactions.status');
         Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
 
         // Finance & Reporting
@@ -98,9 +98,9 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // OWNER & CASHIER ROUTES
+    // OWNER & STAFF ROUTES (Operations)
     // ==========================================
-    Route::middleware('role:owner,cashier')->group(function () {
+    Route::middleware('role:owner,cashier,kitchen')->group(function () {
         // Point of Sale
         Route::get('pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('pos/checkout', [TransactionController::class, 'store'])->name('pos.checkout');
@@ -110,6 +110,22 @@ Route::middleware('auth')->group(function () {
         Route::get('transactions/{transaction}/receipt', [TransactionController::class, 'showReceipt'])->name('transactions.receipt');
         Route::get('transactions/{transaction}/receipt-data', [TransactionController::class, 'receiptData'])->name('transactions.receipt-data');
         Route::patch('transactions/{transaction}/payment', [TransactionController::class, 'confirmPayment'])->name('transactions.payment.confirm');
+
+        // Kitchen Display System (KDS) - Unified
+        Route::get('kds', [KdsController::class, 'index'])->name('kds.index');
+        Route::get('api/kds/orders', [KdsController::class, 'getPendingOrders']);
+        Route::post('api/kds/orders/{transaction}/complete', [KdsController::class, 'markAsComplete']);
+
+        // Order History (View only for Staff)
+        Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
+        Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
+        Route::patch('transactions/{transaction}/status', [TransactionController::class, 'updateStatus'])->name('transactions.status');
+
+        // Raw Materials (Staff can add/update stock)
+        Route::resource('raw-materials', RawMaterialController::class)->except(['create', 'edit', 'show']);
+
+        // Vouchers (Staff can access)
+        Route::resource('vouchers', VoucherController::class)->except(['show']);
 
         // Cash Register / Shift Management
         Route::get('pos/shift', [CashRegisterController::class, 'index'])->name('pos.shift.index');
@@ -123,16 +139,7 @@ Route::middleware('auth')->group(function () {
         Route::get('pos/shift/active', [CashRegisterController::class, 'getActiveShift']);
     });
 
-    // ==========================================
-    // OWNER & KITCHEN ROUTES
-    // ==========================================
-    Route::middleware('role:owner,kitchen')->group(function () {
-        // Kitchen Display System (KDS)
-        Route::get('kds', [KdsController::class, 'index'])->name('kds.index');
-        Route::get('api/kds/orders', [KdsController::class, 'getPendingOrders']);
-        Route::post('api/kds/orders/{transaction}/complete', [KdsController::class, 'markAsComplete']);
-    });
-
 });
 
 require __DIR__.'/auth.php';
+

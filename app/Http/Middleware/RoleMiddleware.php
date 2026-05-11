@@ -19,7 +19,14 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
-        if (!in_array(auth()->user()->role, $roles)) {
+        $user = auth()->user();
+
+        // super_owner can access everything
+        if ($user->isSuperOwner()) {
+            return $next($request);
+        }
+
+        if (!in_array($user->role, $roles)) {
             abort(403, 'Unauthorized action.');
         }
 

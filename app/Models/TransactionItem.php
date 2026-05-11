@@ -4,13 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BranchScope;
 
 class TransactionItem extends Model
 {
-    use HasFactory;
+    use HasFactory, BranchScope;
 
     protected $fillable = [
         'transaction_id',
+        'branch_id',
         'product_id',
         'price',
         'quantity',

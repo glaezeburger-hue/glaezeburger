@@ -247,6 +247,9 @@
                             </td>
                             <td class="py-4 font-bold text-gray-500 text-[11px]">
                                 {{ $tx->created_at->format('H:i') }}
+                                @if(!session('current_branch_id'))
+                                    <div class="text-[9px] font-black text-smash-blue uppercase tracking-widest mt-0.5 opacity-60">{{ $tx->branch->name }}</div>
+                                @endif
                             </td>
                             <td class="py-4 text-right">
                                 <span class="px-2 py-0.5 {{ $tx->payment_method == 'QRIS' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700' }} text-[9px] font-black rounded uppercase tracking-widest">
@@ -276,7 +279,12 @@
             </div>
             <div>
                 <h4 class="text-sm font-black text-red-900 uppercase tracking-widest">Inventory Attention Required</h4>
-                <p class="text-xs font-bold text-red-600/70 mt-1">{{ $lowStockMaterials->count() }} ingredients are running below safe thresholds.</p>
+                <p class="text-xs font-bold text-red-600/70 mt-1">
+                    {{ $lowStockMaterials->count() }} ingredients are running below safe thresholds.
+                    @if(!session('current_branch_id'))
+                        <span class="block text-[10px] opacity-60 mt-0.5">Across multiple branches.</span>
+                    @endif
+                </p>
             </div>
         </div>
         <a href="{{ route('raw-materials.index') }}" class="px-8 py-3 bg-red-500 text-white text-xs font-black rounded-2xl shadow-xl shadow-red-500/20 hover:bg-red-600 transition-all uppercase tracking-widest active:scale-95">

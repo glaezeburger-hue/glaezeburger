@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role',
         'status',
         'last_login_at',
+        'branch_id',
     ];
 
     /**
@@ -49,18 +50,45 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
     ];
 
+    // ── Relationships ──────────────────────────────
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    // ── Role Checks ────────────────────────────────
+    // Role Hierarchy: super_owner -> owner -> cashier
+    // cashier now performs both front-of-house (POS) and back-of-house (KDS) duties.
+
+    public function isSuperOwner(): bool
+    {
+        return $this->role === 'super_owner';
+    }
+
     public function isOwner(): bool
     {
-        return $this->role === 'owner';
+        return in_array($this->role, ['owner', 'super_owner']);
     }
 
     public function isCashier(): bool
     {
-        return $this->role === 'cashier';
+        // cashier is the unified role for both POS and KDS operations
+        // including 'kitchen' here to ensure existing kitchen staff get unified access
+        return in_array($this->role, ['cashier', 'kitchen']);
     }
 
     public function isKitchen(): bool
     {
-        return $this->role === 'kitchen';
+        // Legacy support: kitchen role is being consolidated into cashier
+        return in_array($this->role, ['kitchen', 'cashier']);
+    }
+
+    /**
+     * Check if user has any of the given roles.
+     */
+    public function hasRole(string ...$roles): bool
+    {
+        return in_array($this->role, $roles);
     }
 }

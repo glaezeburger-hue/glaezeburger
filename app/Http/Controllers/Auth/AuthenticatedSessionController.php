@@ -30,7 +30,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $role = $request->user()->role;
-        if ($role === 'owner') {
+        if (in_array($role, ['owner', 'super_owner'])) {
             return redirect()->intended(route('dashboard'));
         } elseif ($role === 'cashier') {
             return redirect()->intended(route('pos.index'));

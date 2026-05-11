@@ -11,6 +11,19 @@ use Carbon\Carbon;
 
 class CashRegisterController extends Controller
 {
+    public function __construct()
+    {
+        // Require a specific branch for all cash register operations
+        $this->middleware(function ($request, $next) {
+            if (!session('current_branch_id')) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Harap pilih cabang spesifik.'], 403);
+                }
+                return redirect()->route('dashboard')->with('error', 'Akses Ditolak: Harap pilih cabang spesifik untuk mengelola Kasir.');
+            }
+            return $next($request);
+        });
+    }
     /**
      * Display the shift management page.
      */

@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BranchScope;
 
 class Wastage extends Model
 {
+    use BranchScope;
+
     protected $fillable = [
-        'raw_material_id', 'user_id', 'quantity', 
+        'raw_material_id', 'user_id', 'branch_id', 'quantity', 
         'reason', 'description', 'wastage_date'
     ];
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\QrisService;
@@ -14,7 +15,11 @@ class PosController extends Controller
      */
     public function index()
     {
-        // Load active shift
+        if (!session('current_branch_id')) {
+            return redirect()->route('dashboard')->with('error', 'Akses Ditolak: Anda harus memilih cabang spesifik di menu atas untuk menggunakan mesin POS, bukan "Semua Cabang".');
+        }
+
+        // Load active shift (auto-scoped to current branch via BranchScope trait)
         $activeShift = \App\Models\CashRegister::where('status', 'open')
             ->first();
 
@@ -33,9 +38,14 @@ class PosController extends Controller
                 $q->where('is_active', true)->with('rawMaterials');
             }
         ])->where('is_active', true)->latest()->get();
+
+        // Raw materials are auto-scoped to current branch
         $rawMaterials = \App\Models\RawMaterial::all();
 
-        return view('pos.index', compact('categories', 'products', 'activeShift', 'rawMaterials'));
+        // Branch info for receipt customization
+        $currentBranch = Branch::find(session('current_branch_id'));
+
+        return view('pos.index', compact('categories', 'products', 'activeShift', 'rawMaterials', 'currentBranch'));
     }
 
     /**
@@ -78,6 +88,8 @@ class PosController extends Controller
                 $q->where('is_active', true);
             }
         ])->where('is_active', true)->latest()->get();
+
+        // Auto-scoped to branch via trait
         $rawMaterials = \App\Models\RawMaterial::all();
 
         return response()->json([
@@ -86,3 +98,4 @@ class PosController extends Controller
         ]);
     }
 }
+

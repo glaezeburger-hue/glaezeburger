@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\BranchScope;
 
 class RawMaterial extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BranchScope;
 
     protected $fillable = [
         'name',
@@ -17,6 +18,7 @@ class RawMaterial extends Model
         'stock',
         'low_stock_threshold',
         'cost_per_unit',
+        'branch_id',
     ];
 
     protected $casts = [

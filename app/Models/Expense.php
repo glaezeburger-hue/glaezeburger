@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BranchScope;
 
 class Expense extends Model
 {
+    use BranchScope;
+
     protected $fillable = [
-        'expense_category_id', 'user_id', 'description', 
+        'expense_category_id', 'user_id', 'branch_id', 'description', 
         'amount', 'expense_date', 'payment_method', 
         'receipt_image', 'notes'
     ];

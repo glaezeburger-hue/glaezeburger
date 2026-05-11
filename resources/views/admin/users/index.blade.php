@@ -13,12 +13,13 @@
         name: @js(old('name', '')),
         email: @js(old('email', '')),
         role: @js(old('role', 'cashier')),
-        status: @js(old('status', '1') == '1')
+        status: @js(old('status', '1') == '1'),
+        branch_id: @js(old('branch_id', session('current_branch_id')))
     },
 
     openCreateModal() {
         this.editing = false;
-        this.user = { id: '', name: '', email: '', role: 'cashier', status: true };
+        this.user = { id: '', name: '', email: '', role: 'cashier', status: true, branch_id: '{{ session('current_branch_id') }}' };
         this.formAction = '{{ route('admin.users.store') }}';
         this.showModal = true;
     },
@@ -30,7 +31,8 @@
             name: userData.name, 
             email: userData.email, 
             role: userData.role, 
-            status: userData.status == 1 
+            status: userData.status == 1,
+            branch_id: userData.branch_id
         };
         this.formAction = `${this.baseUrl}/${userData.id}`;
         this.showModal = true;
@@ -62,7 +64,6 @@
                         <option value="">All Roles</option>
                         <option value="owner" {{ request('role') == 'owner' ? 'selected' : '' }}>Owner</option>
                         <option value="cashier" {{ request('role') == 'cashier' ? 'selected' : '' }}>Cashier</option>
-                        <option value="kitchen" {{ request('role') == 'kitchen' ? 'selected' : '' }}>Kitchen</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,6 +114,9 @@
                     <tr class="bg-gray-50/50">
                         <th class="px-6 py-5 text-left text-[11px] font-black text-gray-400 tracking-widest whitespace-nowrap">User Info</th>
                         <th class="px-6 py-5 text-left text-[11px] font-black text-gray-400 tracking-widest whitespace-nowrap">Role</th>
+                        @if(!session('current_branch_id'))
+                            <th class="px-6 py-5 text-left text-[11px] font-black text-gray-400 tracking-widest whitespace-nowrap">Branch</th>
+                        @endif
                         <th class="px-6 py-5 text-center text-[11px] font-black text-gray-400 tracking-widest whitespace-nowrap">Status</th>
                         <th class="px-6 py-5 text-left text-[11px] font-black text-gray-400 tracking-widest whitespace-nowrap">Last Login</th>
                         <th class="px-6 py-5 text-right text-[11px] font-black text-gray-400 tracking-widest whitespace-nowrap">Actions</th>
@@ -141,6 +145,13 @@
                                 {{ $u->role }}
                             </span>
                         </td>
+                        @if(!session('current_branch_id'))
+                        <td class="px-6 py-5 whitespace-nowrap">
+                            <span class="text-[11px] font-black text-smash-blue uppercase tracking-widest opacity-80 bg-blue-50 px-2 py-1 rounded-lg">
+                                {{ $u->branch->name ?? 'ALL BRANCHES' }}
+                            </span>
+                        </td>
+                        @endif
                         <td class="px-6 py-5 whitespace-nowrap text-center">
                             @if($u->status)
                                 <span class="px-2.5 py-1 bg-green-100 text-green-700 border border-green-200 text-[10px] font-black rounded-lg tracking-widest">ACTIVE</span>
@@ -264,7 +275,6 @@
                                                 class="appearance-none block w-full border-gray-200 rounded-2xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue px-4 py-3 text-sm transition-all bg-gray-50/30 font-bold text-gray-900 border-gray-100 uppercase">
                                                 <option value="owner">OWNER</option>
                                                 <option value="cashier">CASHIER</option>
-                                                <option value="kitchen">KITCHEN</option>
                                             </select>
                                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
                                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,6 +283,24 @@
                                             </div>
                                         </div>
                                     </div>
+                                    @if(auth()->user()->isSuperOwner())
+                                    <div>
+                                        <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Branch Assignment</label>
+                                        <div class="relative">
+                                            <select name="branch_id" x-model="user.branch_id" required 
+                                                class="appearance-none block w-full border-gray-200 rounded-2xl focus:ring-4 focus:ring-smash-blue/5 focus:border-smash-blue px-4 py-3 text-sm transition-all bg-gray-50/30 font-bold text-gray-900 border-gray-100 uppercase">
+                                                @foreach($allBranches as $branch)
+                                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @else
+                                        <input type="hidden" name="branch_id" x-model="user.branch_id">
+                                    @endif
                                     <div>
                                         <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
                                             Password <template x-if="editing"><span class="text-rose-400 font-medium normal-case tracking-normal">(leave blank to keep current)</span></template>

@@ -4,11 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BranchScope;
 
 class TransactionItemVariation extends Model
 {
+    use BranchScope;
+
     protected $fillable = [
         'transaction_item_id',
+        'branch_id',
         'variation_option_id',
         'variation_name',
         'option_name',

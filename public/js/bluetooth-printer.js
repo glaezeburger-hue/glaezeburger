@@ -11,9 +11,16 @@ class BluetoothPrinter {
         this.isPrinting = false;
         
         // Common UUIDs for thermal printers
-        this.services = ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
-        this.characteristics = ['00002af1-0000-1000-8000-00805f9b34fb', 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f'];
-    }
+        this.services = [
+            '000018f0-0000-1000-8000-00805f9b34fb', 
+            'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+            '49535343-fe7d-4ae5-8fa9-9fafd205e455' // ISSC / XPrinter
+        ];
+        this.characteristics = [
+            '00002af1-0000-1000-8000-00805f9b34fb', 
+            'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f',
+            '49535343-8841-43f4-a8d4-ecbe34729bb3' // ISSC / XPrinter
+        ];    }
 
     async connect() {
         try {
@@ -22,13 +29,7 @@ class BluetoothPrinter {
             }
 
             this.device = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { services: this.services },
-                    { namePrefix: 'MP' }, // VSC MP-58A usually starts with MP or similar
-                    { namePrefix: 'MPT' },
-                    { namePrefix: 'VSC' },
-                    { namePrefix: 'Bluetooth Printer' }
-                ],
+                acceptAllDevices: true,
                 optionalServices: this.services
             });
 
@@ -329,7 +330,7 @@ class BluetoothPrinter {
                 if (logoBytes && logoBytes.length > 0) {
                     add(logoBytes);
                     add(BOLD_ON);
-                    add("STREET SMASH BURGER\n");
+                    add((data.receipt_header || 'STREET SMASH BURGER') + "\n");
                     add(BOLD_OFF);
                 }
             } else {
@@ -338,12 +339,12 @@ class BluetoothPrinter {
                 add("GLAEZE\n");
                 add(NORMAL_SIZE);
                 add(BOLD_OFF);
-                add("Street Smash Burger\n");
+                add((data.receipt_header || 'Street Smash Burger') + "\n");
             }
             
             add(NORMAL_SIZE);
-            add("Centra Niaga Square\n");
-            add("Cikarang Utara, Kab Bekasi\n");
+            add((data.branch_name || 'Centra Niaga Square') + "\n");
+            add((data.branch_city || 'Cikarang Utara, Kab Bekasi') + "\n");
             add(LINE_EQUAL);
 
             // ─── 3. TRANSACTION INFO ───
@@ -439,8 +440,15 @@ class BluetoothPrinter {
             // ─── 8. FOOTER ───
             add(ALIGN_CENTER);
             add(LINE_DOT);
-            add("Follow & Tag Us\n");
-            add("IG & TikTok : @glaezeburger\n");
+            add((data.receipt_footer || 'Follow & Tag Us') + "\n");
+            const igHandle = data.receipt_instagram || '@glaezeburger';
+            const ttHandle = data.receipt_tiktok || '@glaezeburger';
+            if (igHandle === ttHandle) {
+                add("IG & TikTok : " + igHandle + "\n");
+            } else {
+                add("IG : " + igHandle + "\n");
+                add("TikTok : " + ttHandle + "\n");
+            }
             add(LINE_EQUAL);
             add("\n");
             

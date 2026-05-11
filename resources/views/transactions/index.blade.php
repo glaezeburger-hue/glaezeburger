@@ -276,6 +276,9 @@
                     <tr class="bg-gray-50/50">
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Invoice</th>
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Date & Time</th>
+                        @if(!session('current_branch_id'))
+                            <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Branch</th>
+                        @endif
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Cashier</th>
                         <th class="px-4 md:px-6 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Items</th>
                         <th class="px-4 md:px-6 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Payment</th>
@@ -305,6 +308,13 @@
                             <div class="text-sm font-bold text-gray-700">{{ $txn->created_at->format('d M Y') }}</div>
                             <div class="text-[11px] font-bold text-gray-400 mt-0.5">{{ $txn->created_at->format('H:i') }}</div>
                         </td>
+                        @if(!session('current_branch_id'))
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 bg-blue-50 text-smash-blue text-[10px] font-black rounded-lg uppercase tracking-widest border border-blue-100">
+                                {{ $txn->branch->name }}
+                            </span>
+                        </td>
+                        @endif
                         <td class="px-4 md:px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center space-x-2">
                                 <div class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-smash-blue text-[10px] font-black uppercase">
@@ -372,7 +382,7 @@
                                 @endif
 
                                 <!-- Delete Button (Owner Only) -->
-                                @if(auth()->user()->role === 'owner')
+                                @if(auth()->user()->isOwner())
                                 <button @click="deleteTransaction({{ $txn->id }}, '{{ $txn->invoice_number }}')" 
                                     class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100" title="Delete Transaction">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

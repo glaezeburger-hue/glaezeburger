@@ -20,7 +20,8 @@ class UserUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($userId)],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['owner', 'cashier', 'kitchen'])],
+            'role' => ['required', Rule::in(['owner', 'cashier', 'super_owner'])],
+            'branch_id' => ['required', 'exists:branches,id'],
             'status' => ['required', 'boolean'],
         ];
     }

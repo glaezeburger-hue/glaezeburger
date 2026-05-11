@@ -129,7 +129,7 @@ class DashboardController extends Controller
         }
 
         // ── Recent Transactions ─────────────────────────────────
-        $recentTransactions = Transaction::with('user')
+        $recentTransactions = Transaction::with(['user', 'branch'])
             ->latest()
             ->limit(5)
             ->get();
@@ -148,13 +148,13 @@ class DashboardController extends Controller
             ->groupBy('product_id')
             ->orderByDesc('total_sold')
             ->limit(5)
-            ->with('product:id,name,selling_price,image_path')
+            ->with(['product:id,name,selling_price,image_path'])
             ->get();
 
         // ── Low Stock Raw Materials ──────────────────────────────
-        $lowStockMaterials = RawMaterial::whereColumn('stock', '<=', 'low_stock_threshold')
+        $lowStockMaterials = RawMaterial::with('branch')->whereColumn('stock', '<=', 'low_stock_threshold')
             ->orderBy('stock', 'asc')
-            ->get(['id', 'name', 'stock', 'sku', 'unit', 'low_stock_threshold']);
+            ->get(['id', 'name', 'stock', 'sku', 'unit', 'low_stock_threshold', 'branch_id']);
 
         // ── Revenue vs Expenses Chart Data (Last 7 Days) ─────────
         $chartLabels = [];

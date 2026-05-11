@@ -4,13 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BranchScope;
 
 class CashRegister extends Model
 {
-    use HasFactory;
+    use HasFactory, BranchScope;
 
     protected $fillable = [
         'user_id',
+        'branch_id',
         'opening_balance',
         'closing_balance',
         'expected_balance',

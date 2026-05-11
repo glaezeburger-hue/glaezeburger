@@ -50,9 +50,9 @@
 <body>
 
     <div class="text-center mb-2">
-        <div class="large bold">GLÆZE Burger</div>
-        <div>Burger Specialist</div>
-        <div>Bekasi, Indonesia</div>
+        <div class="large bold">{{ $transaction->branch->receipt_header ?? 'GLÆZE Burger' }}</div>
+        <div>{{ $transaction->branch->name ?? 'Burger Specialist' }}</div>
+        <div>{{ $transaction->branch->city ?? 'Bekasi, Indonesia' }}</div>
     </div>
 
     <div class="dashed-line"></div>
@@ -165,8 +165,8 @@
     <div class="dashed-line"></div>
 
     <div class="text-center mt-2">
-        <div class="bold">THANK YOU FOR VISITING!</div>
-        <div>Follow us @glaezeburger</div>
+        <div class="bold">{{ $transaction->branch->receipt_footer ?? 'THANK YOU FOR VISITING!' }}</div>
+        <div>Follow us {{ $transaction->branch->receipt_instagram ?? '@glaezeburger' }}</div>
     </div>
 
     <script>

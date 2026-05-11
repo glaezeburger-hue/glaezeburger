@@ -7,6 +7,17 @@ use Illuminate\Http\Request;
 
 class RawMaterialController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            // Block data mutation if no specific branch is selected
+            if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE']) && !session('current_branch_id')) {
+                return back()->with('error', 'Harap pilih cabang spesifik sebelum melakukan perubahan data.');
+            }
+            return $next($request);
+        })->only(['store', 'update', 'destroy']);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -38,9 +49,12 @@ class RawMaterialController extends Controller
             'cost_per_unit' => 'required|numeric|min:0',
         ]);
 
-        RawMaterial::create($validated);
-
-        return redirect()->route('raw-materials.index')->with('success', 'Raw material added successfully.');
+        try {
+            RawMaterial::create($validated);
+            return redirect()->route('raw-materials.index')->with('success', 'Raw material added successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
     }
 
     /**

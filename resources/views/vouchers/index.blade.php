@@ -54,6 +54,7 @@
             </div>
         </div>
         
+        @if(auth()->user()->isOwner())
         <button @click="openAddModal()" 
             class="inline-flex items-center justify-center px-8 py-3.5 border border-transparent text-sm font-black rounded-2xl shadow-xl shadow-smash-blue/20 text-white bg-smash-blue hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-smash-blue/20 transition-all transform hover:-translate-y-0.5 active:scale-95">
             <svg class="w-5 h-5 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,6 +62,7 @@
             </svg>
             Generate Voucher
         </button>
+        @endif
     </div>
 
     <!-- Voucher Table -->
@@ -136,6 +138,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 00-2 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                     </svg>
                                 </button>
+                                @if(auth()->user()->isOwner())
                                 <form action="{{ route('vouchers.destroy', $v) }}" method="POST" onsubmit="return confirm('Delete this voucher?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100">
@@ -144,6 +147,7 @@
                                         </svg>
                                     </button>
                                 </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

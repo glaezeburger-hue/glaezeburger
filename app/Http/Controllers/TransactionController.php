@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Branch;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with(['items.product', 'items.addons', 'user', 'voucher']);
+        $query = Transaction::with(['items.product', 'items.addons', 'user', 'voucher', 'branch']);
 
         // Search by invoice number or customer name
         if ($request->filled('search')) {
@@ -366,6 +367,7 @@ class TransactionController extends Controller
                 'invoice_number' => Transaction::generateInvoiceNumber(),
                 'customer_name' => $request->input('customer_name'),
                 'user_id' => auth()->id(),
+                'branch_id' => session('current_branch_id'),
                 'cash_register_id' => $activeShift->id,
                 'subtotal' => $subtotal,
                 'discount_type' => $discountType,
@@ -476,7 +478,7 @@ class TransactionController extends Controller
      */
     public function showReceipt(Transaction $transaction)
     {
-        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user']);
+        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user', 'branch']);
         return view('pos.receipt', compact('transaction'));
     }
 
@@ -485,7 +487,10 @@ class TransactionController extends Controller
      */
     public function receiptData(Transaction $transaction)
     {
-        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user', 'voucher']);
+        $transaction->load(['items.product', 'items.variations', 'items.addons', 'user', 'voucher', 'branch']);
+
+        // Branch info for receipt header
+        $branch = $transaction->branch;
 
         return response()->json([
             'id' => $transaction->id,
@@ -500,6 +505,14 @@ class TransactionController extends Controller
             'tax_amount' => $transaction->tax_amount,
             'total_amount' => $transaction->total_amount,
             'payment_method' => $transaction->payment_method,
+            // Branch info for receipt customization
+            'branch_name' => $branch->name ?? 'GLAEZE',
+            'branch_address' => $branch->address ?? '',
+            'branch_city' => $branch->city ?? '',
+            'receipt_header' => $branch->receipt_header ?? 'Street Smash Burger',
+            'receipt_footer' => $branch->receipt_footer ?? 'Follow & Tag Us',
+            'receipt_instagram' => $branch->receipt_instagram ?? '@glaezeburger',
+            'receipt_tiktok' => $branch->receipt_tiktok ?? '@glaezeburger',
             'items' => $transaction->items->map(function ($item) {
                 return [
                     'product_name' => $item->product->name ?? 'Deleted Product',
@@ -550,96 +563,103 @@ class TransactionController extends Controller
             'notes' => 'nullable|string|max:1000'
         ]);
 
-        return DB::transaction(function () use ($request) {
-            $subtotal = 0;
-            $items = [];
+        try {
+            return DB::transaction(function () use ($request) {
+                $subtotal = 0;
+                $items = [];
 
-            // Calculate totals (NO stock validation for historical imports)
-            foreach ($request->cart as $item) {
-                $product = Product::find($item['id']);
-                $price = (float) $item['custom_price']; // Use custom price
-                $itemSubtotal = $price * $item['quantity'];
-                
-                $subtotal += $itemSubtotal;
+                // Calculate totals (NO stock validation for historical imports)
+                foreach ($request->cart as $item) {
+                    $product = Product::find($item['id']);
+                    $price = (float) $item['custom_price']; // Use custom price
+                    $itemSubtotal = $price * $item['quantity'];
+                    
+                    $subtotal += $itemSubtotal;
 
-                $items[] = [
-                    'product_id' => $product->id,
-                    'price' => $price,
-                    'quantity' => $item['quantity'],
-                    'subtotal' => $itemSubtotal,
-                    'notes' => $item['notes'] ?? null,
-                ];
-            }
+                    $items[] = [
+                        'product_id' => $product->id,
+                        'price' => $price,
+                        'quantity' => $item['quantity'],
+                        'subtotal' => $itemSubtotal,
+                        'notes' => $item['notes'] ?? null,
+                    ];
+                }
 
-            // Calculate Discount
-            $discountAmount = 0;
-            $discountType = $request->input('discount_type');
-            $discountValue = (float) $request->input('discount_value', 0);
+                // Calculate Discount
+                $discountAmount = 0;
+                $discountType = $request->input('discount_type');
+                $discountValue = (float) $request->input('discount_value', 0);
 
-            if ($discountType === 'percentage') {
-                $discountAmount = $subtotal * ($discountValue / 100);
-            } elseif ($discountType === 'nominal') {
-                $discountAmount = $discountValue;
-            }
+                if ($discountType === 'percentage') {
+                    $discountAmount = $subtotal * ($discountValue / 100);
+                } elseif ($discountType === 'nominal') {
+                    $discountAmount = $discountValue;
+                }
 
-            if ($discountAmount > $subtotal) {
-                $discountAmount = $subtotal;
-            }
+                if ($discountAmount > $subtotal) {
+                    $discountAmount = $subtotal;
+                }
 
-            // Calculate Netsales & Tax
-            $netSales = max(0, $subtotal - $discountAmount);
-            $taxAmount = $request->boolean('apply_tax') ? $netSales * 0.10 : 0;
-            $totalAmount = $netSales + $taxAmount;
+                // Calculate Netsales & Tax
+                $netSales = max(0, $subtotal - $discountAmount);
+                $taxAmount = $request->boolean('apply_tax') ? $netSales * 0.10 : 0;
+                $totalAmount = $netSales + $taxAmount;
 
-            $timestamp = \Carbon\Carbon::parse($request->transaction_date)->setTimeFromTimeString(now()->toTimeString());
+                $timestamp = \Carbon\Carbon::parse($request->transaction_date)->setTimeFromTimeString(now()->toTimeString());
 
-            // 1. Generate Invoice Number based on transaction_date (for backdated consistency)
-            $dateStr = $timestamp->format('Ymd');
-            $lastTxn = Transaction::whereDate('created_at', $timestamp->toDateString())->latest()->first();
-            $seq = $lastTxn ? (int)substr($lastTxn->invoice_number, -4) + 1 : 1;
-            $invoiceNumber = 'INV-' . $dateStr . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+                // 1. Generate Invoice Number based on transaction_date (for backdated consistency)
+                $dateStr = $timestamp->format('Ymd');
+                $lastTxn = Transaction::whereDate('created_at', $timestamp->toDateString())->latest()->first();
+                $seq = $lastTxn ? (int)substr($lastTxn->invoice_number, -4) + 1 : 1;
+                $invoiceNumber = 'INV-' . $dateStr . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
 
-            // 1. Create Transaction
-            $transaction = new Transaction([
-                'invoice_number' => $invoiceNumber,
-                'user_id' => auth()->id(),
-                'subtotal' => $subtotal,
-                'discount_type' => $discountType,
-                'discount_value' => $discountValue,
-                'discount_amount' => $discountAmount,
-                'net_sales' => $netSales,
-                'tax_amount' => $taxAmount,
-                'total_amount' => $totalAmount,
-                'payment_method' => $request->payment_method,
-                'order_status' => 'Sudah', // Immediately marked as done
-                'is_imported' => true // Audit trail flag
-            ]);
-            $transaction->created_at = $timestamp;
-            $transaction->updated_at = $timestamp;
-            $transaction->save();
-
-            // 2. Create Transaction Items (NO stock deduction)
-            foreach ($items as $itemData) {
-                $tItem = new \App\Models\TransactionItem([
-                    'product_id' => $itemData['product_id'],
-                    'price' => $itemData['price'],
-                    'quantity' => $itemData['quantity'],
-                    'subtotal' => $itemData['subtotal'],
-                    'notes' => $itemData['notes'],
+                // 1. Create Transaction
+                $transaction = new Transaction([
+                    'invoice_number' => $invoiceNumber,
+                    'user_id' => auth()->id(),
+                    'subtotal' => $subtotal,
+                    'discount_type' => $discountType,
+                    'discount_value' => $discountValue,
+                    'discount_amount' => $discountAmount,
+                    'net_sales' => $netSales,
+                    'tax_amount' => $taxAmount,
+                    'total_amount' => $totalAmount,
+                    'payment_method' => $request->payment_method,
+                    'order_status' => 'Sudah', // Immediately marked as done
+                    'is_imported' => true // Audit trail flag
                 ]);
-                $tItem->transaction_id = $transaction->id;
-                $tItem->created_at = $timestamp;
-                $tItem->updated_at = $timestamp;
-                $tItem->save();
-            }
+                $transaction->created_at = $timestamp;
+                $transaction->updated_at = $timestamp;
+                $transaction->save();
 
+                // 2. Create Transaction Items (NO stock deduction)
+                foreach ($items as $itemData) {
+                    $tItem = new \App\Models\TransactionItem([
+                        'product_id' => $itemData['product_id'],
+                        'price' => $itemData['price'],
+                        'quantity' => $itemData['quantity'],
+                        'subtotal' => $itemData['subtotal'],
+                        'notes' => $itemData['notes'],
+                    ]);
+                    $tItem->transaction_id = $transaction->id;
+                    $tItem->created_at = $timestamp;
+                    $tItem->updated_at = $timestamp;
+                    $tItem->save();
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Historical transaction imported successfully.',
+                    'invoice_number' => $transaction->invoice_number,
+                    'transaction_id' => $transaction->id
+                ]);
+            });
+        } catch (\Exception $e) {
             return response()->json([
-                'success' => true,
-                'message' => 'Historical transaction imported successfully.',
-                'invoice_number' => $transaction->invoice_number,
-                'transaction_id' => $transaction->id
-            ]);
-        });
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
 
     /**

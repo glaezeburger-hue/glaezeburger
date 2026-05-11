@@ -15,6 +15,20 @@ use Illuminate\Support\Facades\Storage;
 
 class ExpenseController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            // Block data mutation if no specific branch is selected
+            if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE']) && !session('current_branch_id')) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['message' => 'Harap pilih cabang spesifik sebelum melakukan perubahan data.'], 403);
+                }
+                return back()->with('error', 'Harap pilih cabang spesifik sebelum melakukan perubahan data.');
+            }
+            return $next($request);
+        })->only(['store', 'update', 'destroy', 'storeWastage', 'destroyWastage', 'storeCategory']);
+    }
+
     /**
      * Display a listing of expenses.
      */

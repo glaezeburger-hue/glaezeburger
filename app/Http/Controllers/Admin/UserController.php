@@ -16,7 +16,14 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = User::with('branch');
+
+        // Scope to current branch for non-super_owner
+        if (!auth()->user()->isSuperOwner()) {
+            $query->where('branch_id', session('current_branch_id'));
+        } elseif ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
 
         // Filter by role
         if ($request->filled('role')) {
