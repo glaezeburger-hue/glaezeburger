@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RawMaterial;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RawMaterialController extends Controller
 {
@@ -42,7 +43,11 @@ class RawMaterialController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => 'required|string|unique:raw_materials,sku',
+            'sku' => [
+                'required', 
+                'string', 
+                Rule::unique('raw_materials')->where('branch_id', session('current_branch_id'))->whereNull('deleted_at')
+            ],
             'unit' => 'required|string|max:50',
             'stock' => 'required|numeric|min:0',
             'low_stock_threshold' => 'required|numeric|min:0',
@@ -64,7 +69,14 @@ class RawMaterialController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => 'required|string|unique:raw_materials,sku,' . $rawMaterial->id,
+            'sku' => [
+                'required', 
+                'string', 
+                Rule::unique('raw_materials')
+                    ->where('branch_id', session('current_branch_id'))
+                    ->whereNull('deleted_at')
+                    ->ignore($rawMaterial->id)
+            ],
             'unit' => 'required|string|max:50',
             'stock' => 'required|numeric|min:0',
             'low_stock_threshold' => 'required|numeric|min:0',
