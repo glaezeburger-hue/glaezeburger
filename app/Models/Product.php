@@ -78,17 +78,29 @@ class Product extends Model
             return $this->stock;
         }
 
-        if ($this->rawMaterials->isEmpty()) {
+        // Get ingredients template (without branch filter)
+        $ingredients = $this->rawMaterials()->withoutGlobalScopes()->get();
+        
+        if ($ingredients->isEmpty()) {
             return 0;
         }
 
+        $branchId = session('current_branch_id');
+        if (!$branchId) {
+            return 0; // Or return total across all branches if that's the intent, but usually 0 for safety
+        }
+
         $possibleQuantities = [];
-        foreach ($this->rawMaterials as $ingredient) {
+        foreach ($ingredients as $ingredient) {
             $requiredQuantity = $ingredient->pivot->quantity;
             if ($requiredQuantity > 0) {
-                // Calculate how many times the required quantity fits into the available stock
-                // use floor directly on numeric values
-                $possibleQuantities[] = floor($ingredient->stock / $requiredQuantity);
+                // Find the local stock for this ingredient SKU in the CURRENT branch
+                $localMaterial = \App\Models\RawMaterial::where('sku', $ingredient->sku)
+                    ->where('branch_id', $branchId)
+                    ->first();
+                
+                $localStock = $localMaterial ? $localMaterial->stock : 0;
+                $possibleQuantities[] = floor($localStock / $requiredQuantity);
             } else {
                 $possibleQuantities[] = 0;
             }
