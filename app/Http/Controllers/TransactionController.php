@@ -432,6 +432,7 @@ class TransactionController extends Controller
                 if (!empty($itemData['variations'])) {
                     $varsToInsert = array_map(function($var) use ($tItem) {
                         $var['transaction_item_id'] = $tItem->id;
+                        $var['branch_id'] = session('current_branch_id');
                         return $var;
                     }, $itemData['variations']);
                     
@@ -441,6 +442,7 @@ class TransactionController extends Controller
                 if (!empty($itemData['addons'])) {
                     $addonsToInsert = array_map(function($addon) use ($tItem) {
                         $addon['transaction_item_id'] = $tItem->id;
+                        $addon['branch_id'] = session('current_branch_id');
                         return $addon;
                     }, $itemData['addons']);
                     
