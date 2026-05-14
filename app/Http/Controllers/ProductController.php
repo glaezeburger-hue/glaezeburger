@@ -261,16 +261,23 @@ class ProductController extends Controller
             $newProduct->save();
 
             // 2. Clone Raw Material Ingredients
-            if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
+            $sourceIngredients = $product->rawMaterials()->withoutGlobalScopes()->get();
+            if ($product->is_recipe_based && $sourceIngredients->isNotEmpty()) {
                 $syncData = [];
-                foreach ($product->rawMaterials as $ingredient) {
+                foreach ($sourceIngredients as $ingredient) {
                     // Find or create the corresponding raw material in the target branch
-                    $targetMaterial = \App\Models\RawMaterial::withoutGlobalScopes()
+                    $targetMaterial = \App\Models\RawMaterial::withTrashed()
+                        ->withoutGlobalScopes()
                         ->where('branch_id', $targetBranchId)
                         ->where('sku', $ingredient->sku)
                         ->first();
 
-                    if (!$targetMaterial) {
+                    if ($targetMaterial) {
+                        // If it was soft-deleted, restore it to use it again
+                        if ($targetMaterial->trashed()) {
+                            $targetMaterial->restore();
+                        }
+                    } else {
                         $targetMaterial = \App\Models\RawMaterial::create([
                             'branch_id' => $targetBranchId,
                             'name' => $ingredient->name,
@@ -292,18 +299,20 @@ class ProductController extends Controller
             }
 
             // 3. Clone Variation Groups
-            if ($product->variationGroups->isNotEmpty()) {
+            $sourceVariationGroups = $product->variationGroups()->withoutGlobalScopes()->get();
+            if ($sourceVariationGroups->isNotEmpty()) {
                 $varSyncData = [];
-                foreach ($product->variationGroups as $vg) {
+                foreach ($sourceVariationGroups as $vg) {
                     $varSyncData[$vg->id] = ['sort_order' => $vg->pivot->sort_order];
                 }
                 $newProduct->variationGroups()->sync($varSyncData);
             }
 
             // 4. Clone Addons
-            if ($product->addons->isNotEmpty()) {
+            $sourceAddons = $product->addons()->withoutGlobalScopes()->get();
+            if ($sourceAddons->isNotEmpty()) {
                 $addonSyncData = [];
-                foreach ($product->addons as $addon) {
+                foreach ($sourceAddons as $addon) {
                     $addonSyncData[$addon->id] = ['sort_order' => $addon->pivot->sort_order];
                 }
                 $newProduct->addons()->sync($addonSyncData);

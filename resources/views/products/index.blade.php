@@ -295,7 +295,7 @@
                         </td>
                         <td class="px-4 md:px-8 py-5 text-right font-medium whitespace-nowrap">
                             <div class="flex items-center justify-end space-x-2">
-                                <button @click="openDuplicateModal({{ json_encode($prod) }})" class="p-2.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-transparent hover:border-green-100" title="Duplicate to another branch">
+                                <button @click="openDuplicateModal({{ json_encode($prod) }})" class="p-2.5 text-gray-400 hover:text-smash-blue hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100" title="Duplicate to another branch">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
                                     </svg>
@@ -703,7 +703,7 @@
                     class="relative w-screen max-w-md">
                     
                     <div class="h-full flex flex-col bg-white shadow-2xl overflow-hidden">
-                        <div class="px-8 py-10 bg-green-600 relative overflow-hidden">
+                        <div class="px-8 py-10 bg-smash-blue relative overflow-hidden">
                             <div class="relative z-10">
                                 <div class="flex items-start justify-between">
                                     <h2 class="text-2xl font-black text-white uppercase tracking-tighter" id="duplicate-slide-title">Duplicate Product</h2>
@@ -715,7 +715,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <p class="mt-2 text-[12px] font-bold text-green-100/80 uppercase tracking-widest italic leading-none" x-text="'Copy ' + (duplicateProduct ? duplicateProduct.name : '') + ' to another branch'"></p>
+                                <p class="mt-2 text-[12px] font-bold text-blue-100/80 uppercase tracking-widest italic leading-none" x-text="'Copy ' + (duplicateProduct ? duplicateProduct.name : '') + ' to another branch'"></p>
                             </div>
                             <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
                         </div>
@@ -726,7 +726,7 @@
                                 <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3">Target Branch</label>
                                 <div class="relative">
                                     <select name="target_branch_id" x-model="targetBranchId" required
-                                        class="appearance-none block w-full border-gray-100 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-green-600/5 focus:border-green-600 px-4 py-4 text-sm transition-all font-bold text-gray-600">
+                                        class="appearance-none block w-full border-gray-100 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-smash-blue/10 focus:border-smash-blue px-4 py-4 text-sm transition-all font-bold text-gray-600">
                                         <option value="">Select Branch</option>
                                         <template x-for="branch in branches" :key="branch.id">
                                             <option :value="branch.id" x-text="branch.name"></option>
@@ -745,7 +745,7 @@
                             
                             <div class="mt-auto space-y-4 pt-10 border-t border-gray-50">
                                 <button type="submit" 
-                                    class="w-full py-5 bg-green-600 text-white rounded-2xl font-black shadow-2xl shadow-green-600/20 hover:bg-green-700 transition-all transform hover:-translate-y-1 active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-3">
+                                    class="w-full py-5 bg-smash-blue text-white rounded-2xl font-black shadow-2xl shadow-smash-blue/20 hover:bg-blue-700 transition-all transform hover:-translate-y-1 active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-3">
                                     <span>Confirm Duplication</span>
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
