@@ -5,6 +5,9 @@
 @section('content')
 <div x-data="{ 
     showCategoryModal: false,
+    showDuplicateModal: false,
+    duplicateProduct: null,
+    targetBranchId: '',
     newCategoryName: '',
     showModal: @js($errors->any()),
     editing: @js(old('_method') === 'PUT'),
@@ -30,6 +33,7 @@
     rawMaterials: @js($rawMaterials ?? []),
     variationGroupsList: @js($variationGroups ?? []),
     addonsList: @js($addonsList ?? []),
+    branches: @js($branches ?? []),
 
     get totalHpp() {
         if (!this.product.is_recipe_based || !this.product.ingredients.length) return 0;
@@ -77,9 +81,15 @@
     openAddModal() {
         this.editing = false;
         this.formAction = '{{ route('products.store') }}';
-        this.product = { id: '', name: '', category_id: '', sku: '', cost_price: '', selling_price: '', stock: '', description: '', is_active: true, is_recipe_based: false, ingredients: [], variation_groups: [] };
+        this.product = { id: '', name: '', category_id: '', sku: '', cost_price: '', selling_price: '', stock: '', description: '', is_active: true, is_recipe_based: false, ingredients: [], variation_groups: [], addons: [] };
         this.imagePreview = null;
         this.showModal = true;
+    },
+    
+    openDuplicateModal(item) {
+        this.duplicateProduct = item;
+        this.targetBranchId = '';
+        this.showDuplicateModal = true;
     },
     
     openEditModal(item) {
@@ -285,6 +295,11 @@
                         </td>
                         <td class="px-4 md:px-8 py-5 text-right font-medium whitespace-nowrap">
                             <div class="flex items-center justify-end space-x-2">
+                                <button @click="openDuplicateModal({{ json_encode($prod) }})" class="p-2.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-transparent hover:border-green-100" title="Duplicate to another branch">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+                                    </svg>
+                                </button>
                                 <button @click="openEditModal({{ json_encode($prod) }})" class="p-2.5 text-gray-400 hover:text-smash-blue hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 00-2 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -671,6 +686,76 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duplicate Modal -->
+    <div x-show="showDuplicateModal" class="fixed inset-0 overflow-hidden z-[60] text-[13px]" aria-labelledby="duplicate-slide-title" role="dialog" aria-modal="true" style="display: none;">
+        <div class="absolute inset-0 overflow-hidden">
+            <div x-show="showDuplicateModal" x-transition:enter="transition-opacity ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" 
+                class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="showDuplicateModal = false" aria-hidden="true"></div>
+
+            <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+                <div x-show="showDuplicateModal" x-transition:enter="transform transition ease-in-out duration-500 sm:duration-700" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transform transition ease-in-out duration-500 sm:duration-700" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" 
+                    class="relative w-screen max-w-md">
+                    
+                    <div class="h-full flex flex-col bg-white shadow-2xl overflow-hidden">
+                        <div class="px-8 py-10 bg-green-600 relative overflow-hidden">
+                            <div class="relative z-10">
+                                <div class="flex items-start justify-between">
+                                    <h2 class="text-2xl font-black text-white uppercase tracking-tighter" id="duplicate-slide-title">Duplicate Product</h2>
+                                    <div class="ml-3 h-7 flex items-center">
+                                        <button type="button" @click="showDuplicateModal = false" class="rounded-xl p-1 bg-white/10 text-white hover:bg-white/20 transition-all">
+                                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-[12px] font-bold text-green-100/80 uppercase tracking-widest italic leading-none" x-text="'Copy ' + (duplicateProduct ? duplicateProduct.name : '') + ' to another branch'"></p>
+                            </div>
+                            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+                        </div>
+
+                        <form :action="duplicateProduct ? baseUrl + '/' + duplicateProduct.id + '/duplicate' : ''" method="POST" class="flex-1 flex flex-col font-bold p-8 space-y-8">
+                            @csrf
+                            <div>
+                                <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3">Target Branch</label>
+                                <div class="relative">
+                                    <select name="target_branch_id" x-model="targetBranchId" required
+                                        class="appearance-none block w-full border-gray-100 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-green-600/5 focus:border-green-600 px-4 py-4 text-sm transition-all font-bold text-gray-600">
+                                        <option value="">Select Branch</option>
+                                        <template x-for="branch in branches" :key="branch.id">
+                                            <option :value="branch.id" x-text="branch.name"></option>
+                                        </template>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <p class="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed">
+                                    The product, its recipe (if any), variations, and addons will be copied. Any missing raw materials will be auto-created with 0 stock in the target branch.
+                                </p>
+                            </div>
+                            
+                            <div class="mt-auto space-y-4 pt-10 border-t border-gray-50">
+                                <button type="submit" 
+                                    class="w-full py-5 bg-green-600 text-white rounded-2xl font-black shadow-2xl shadow-green-600/20 hover:bg-green-700 transition-all transform hover:-translate-y-1 active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-3">
+                                    <span>Confirm Duplication</span>
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+                                    </svg>
+                                </button>
+                                <button type="button" @click="showDuplicateModal = false" class="w-full py-2 text-[11px] font-black text-gray-400 hover:text-gray-900 transition-colors uppercase tracking-widest">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>

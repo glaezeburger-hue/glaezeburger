@@ -61,6 +61,7 @@ Route::middleware(['auth', 'branch'])->group(function () {
         // Products
         Route::resource('products', ProductController::class);
         Route::post('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
+        Route::post('products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
         
         // Categories
         Route::resource('categories', CategoryController::class)->only(['index', 'store']);

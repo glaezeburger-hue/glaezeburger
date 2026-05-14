@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Traits\BranchScope;
 
 class Product extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BranchScope;
 
     protected $fillable = [
+        'branch_id',
         'category_id',
         'name',
         'slug',
@@ -78,29 +80,17 @@ class Product extends Model
             return $this->stock;
         }
 
-        // Get ingredients template (without branch filter)
-        $ingredients = $this->rawMaterials()->withoutGlobalScopes()->get();
+        $ingredients = $this->rawMaterials;
         
         if ($ingredients->isEmpty()) {
             return 0;
-        }
-
-        $branchId = session('current_branch_id');
-        if (!$branchId) {
-            return 0; // Or return total across all branches if that's the intent, but usually 0 for safety
         }
 
         $possibleQuantities = [];
         foreach ($ingredients as $ingredient) {
             $requiredQuantity = $ingredient->pivot->quantity;
             if ($requiredQuantity > 0) {
-                // Find the local stock for this ingredient SKU in the CURRENT branch
-                $localMaterial = \App\Models\RawMaterial::where('sku', $ingredient->sku)
-                    ->where('branch_id', $branchId)
-                    ->first();
-                
-                $localStock = $localMaterial ? $localMaterial->stock : 0;
-                $possibleQuantities[] = floor($localStock / $requiredQuantity);
+                $possibleQuantities[] = floor($ingredient->stock / $requiredQuantity);
             } else {
                 $possibleQuantities[] = 0;
             }

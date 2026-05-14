@@ -206,9 +206,7 @@ class TransactionController extends Controller
             foreach ($request->cart as $item) {
                 // Load product with ingredients, but bypass branch scope for ingredients 
                 // to get the 'template' recipe. We will then find branch-specific materials by SKU.
-                $product = Product::with(['rawMaterials' => function($q) {
-                    $q->withoutGlobalScopes();
-                }])->lockForUpdate()->find($item['id']);
+                $product = Product::with('rawMaterials')->lockForUpdate()->find($item['id']);
                 
                 // Calculate Variation Price Modifiers
                 $variationSubtotal = 0;
@@ -249,9 +247,7 @@ class TransactionController extends Controller
                     foreach ($item['addons'] as $addonData) {
                        $addonId = $addonData['id'];
                        $addonQty = (int)$addonData['quantity'];
-                       $addon = \App\Models\Addon::with(['rawMaterials' => function($q) {
-                           $q->withoutGlobalScopes();
-                       }])->find($addonId);
+                       $addon = \App\Models\Addon::with('rawMaterials')->find($addonId);
                        if ($addon) {
                            $addonsSubtotal += ($addon->selling_price * $addonQty);
                            $selectedAddons[] = [
@@ -268,20 +264,15 @@ class TransactionController extends Controller
                            foreach ($addon->rawMaterials as $ingredient) {
                                $needed = $ingredient->pivot->quantity * $addonQty * $item['quantity'];
                                
-                               // Find local material for addon ingredient
-                               $rawMaterial = \App\Models\RawMaterial::where('sku', $ingredient->sku)
-                                   ->where('branch_id', session('current_branch_id'))
-                                   ->lockForUpdate()
-                                   ->first();
-
+                               $rawMaterial = \App\Models\RawMaterial::lockForUpdate()->find($ingredient->id);
                                if (!$rawMaterial) {
-                                   throw new \Exception("Bahan baku Addon '{$ingredient->name}' (SKU: {$ingredient->sku}) tidak ditemukan di cabang ini.");
+                                   throw new \Exception("Bahan baku '{$ingredient->name}' tidak ditemukan.");
                                }
 
                                $tempRawMaterialUsage[$rawMaterial->id] = ($tempRawMaterialUsage[$rawMaterial->id] ?? 0) + $needed;
                                
                                if ($rawMaterial->stock < $tempRawMaterialUsage[$rawMaterial->id]) {
-                                   throw new \Exception("Stok bahan baku Addon '{$rawMaterial->name}' tidak mencukupi.");
+                                   throw new \Exception("Stok '{$rawMaterial->name}' (Addon) tidak mencukupi.");
                                }
                            }
                        }
@@ -297,21 +288,16 @@ class TransactionController extends Controller
                         
                         $needed = $ingredient->pivot->quantity * $item['quantity'];
                         
-                        // Find the local branch's version of this ingredient by SKU
-                        $rawMaterial = \App\Models\RawMaterial::where('sku', $ingredient->sku)
-                            ->where('branch_id', session('current_branch_id'))
-                            ->lockForUpdate()
-                            ->first();
-
+                        $rawMaterial = \App\Models\RawMaterial::lockForUpdate()->find($ingredient->id);
                         if (!$rawMaterial) {
-                            throw new \Exception("Ingredient '{$ingredient->name}' (SKU: {$ingredient->sku}) tidak ditemukan di cabang ini. Mohon hubungi Admin untuk sinkronisasi bahan baku.");
+                            throw new \Exception("Bahan baku '{$ingredient->name}' tidak ditemukan.");
                         }
                         
                         // Track cumulative usage for this specific material
                         $tempRawMaterialUsage[$rawMaterial->id] = ($tempRawMaterialUsage[$rawMaterial->id] ?? 0) + $needed;
                         
                         if ($rawMaterial->stock < $tempRawMaterialUsage[$rawMaterial->id]) {
-                            throw new \Exception("Stok bahan baku '{$rawMaterial->name}' tidak mencukupi di cabang ini.");
+                            throw new \Exception("Stok '{$rawMaterial->name}' tidak mencukupi (Sisa: " . (float)$rawMaterial->stock . ").");
                         }
                     }
                 } else {
@@ -450,14 +436,10 @@ class TransactionController extends Controller
                     
                     // Deduct stock for addons
                     foreach ($itemData['addons'] as $addonData) {
-                        $addon = \App\Models\Addon::with(['rawMaterials' => function($q) {
-                            $q->withoutGlobalScopes();
-                        }])->find($addonData['addon_id']);
+                        $addon = \App\Models\Addon::with('rawMaterials')->find($addonData['addon_id']);
                         if ($addon && $addon->rawMaterials->isNotEmpty()) {
                             foreach ($addon->rawMaterials as $ingredient) {
-                                $rawMaterial = \App\Models\RawMaterial::where('sku', $ingredient->sku)
-                                    ->where('branch_id', session('current_branch_id'))
-                                    ->first();
+                                $rawMaterial = \App\Models\RawMaterial::find($ingredient->id);
                                 
                                 if ($rawMaterial) {
                                     $rawMaterial->decrement('stock', $ingredient->pivot->quantity * $addonData['quantity'] * $itemData['quantity']);
@@ -484,10 +466,7 @@ class TransactionController extends Controller
                             continue;
                         }
                         
-                        // Again, find the local branch's version to decrement
-                        $rawMaterial = \App\Models\RawMaterial::where('sku', $ingredient->sku)
-                            ->where('branch_id', session('current_branch_id'))
-                            ->first();
+                        $rawMaterial = \App\Models\RawMaterial::find($ingredient->id);
 
                         if ($rawMaterial) {
                             $rawMaterial->decrement('stock', $ingredient->pivot->quantity * $itemData['quantity']);

@@ -33,8 +33,11 @@ class ProductController extends Controller
         $rawMaterials = RawMaterial::orderBy('name')->get(['id', 'name', 'unit', 'cost_per_unit']);
         $variationGroups = \App\Models\VariationGroup::with('options')->get();
         $addonsList = Addon::orderBy('name')->get();
+        $branches = \App\Models\Branch::where('is_active', true)
+            ->where('id', '!=', session('current_branch_id'))
+            ->get();
 
-        return view('products.index', compact('products', 'categories', 'rawMaterials', 'variationGroups', 'addonsList'));
+        return view('products.index', compact('products', 'categories', 'rawMaterials', 'variationGroups', 'addonsList', 'branches'));
     }
 
     /**
@@ -44,8 +47,8 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255|unique:products,name',
-            'sku' => 'required|string|unique:products,sku',
+            'name' => 'required|string|max:255|unique:products,name,NULL,id,branch_id,' . session('current_branch_id'),
+            'sku' => 'required|string|unique:products,sku,NULL,id,branch_id,' . session('current_branch_id'),
             'description' => 'nullable|string',
             'cost_price' => 'required|numeric|min:0',
             'selling_price' => 'required|numeric|min:0',
@@ -125,8 +128,8 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255|unique:products,name,' . $product->id,
-            'sku' => 'required|string|unique:products,sku,' . $product->id,
+            'name' => 'required|string|max:255|unique:products,name,' . $product->id . ',id,branch_id,' . session('current_branch_id'),
+            'sku' => 'required|string|unique:products,sku,' . $product->id . ',id,branch_id,' . session('current_branch_id'),
             'description' => 'nullable|string',
             'cost_price' => 'required|numeric|min:0',
             'selling_price' => 'required|numeric|min:0',
@@ -223,5 +226,90 @@ class ProductController extends Controller
             'is_active' => $product->is_active,
             'message' => 'Status updated successfully.'
         ]);
+    }
+
+    /**
+     * Duplicate a product to another branch.
+     */
+    public function duplicate(Request $request, Product $product)
+    {
+        $request->validate([
+            'target_branch_id' => 'required|exists:branches,id',
+        ]);
+
+        $targetBranchId = $request->target_branch_id;
+
+        // Ensure we're not duplicating to the same branch
+        if ($targetBranchId == session('current_branch_id')) {
+            return back()->with('error', 'Cannot duplicate product to the same branch.');
+        }
+
+        // Check if SKU already exists in target branch
+        $existingProduct = Product::withoutGlobalScopes()
+            ->where('branch_id', $targetBranchId)
+            ->where('sku', $product->sku)
+            ->first();
+
+        if ($existingProduct) {
+            return back()->with('error', "A product with SKU {$product->sku} already exists in the target branch.");
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($product, $targetBranchId) {
+            // 1. Clone Product
+            $newProduct = $product->replicate();
+            $newProduct->branch_id = $targetBranchId;
+            $newProduct->save();
+
+            // 2. Clone Raw Material Ingredients
+            if ($product->is_recipe_based && $product->rawMaterials->isNotEmpty()) {
+                $syncData = [];
+                foreach ($product->rawMaterials as $ingredient) {
+                    // Find or create the corresponding raw material in the target branch
+                    $targetMaterial = \App\Models\RawMaterial::withoutGlobalScopes()
+                        ->where('branch_id', $targetBranchId)
+                        ->where('sku', $ingredient->sku)
+                        ->first();
+
+                    if (!$targetMaterial) {
+                        $targetMaterial = \App\Models\RawMaterial::create([
+                            'branch_id' => $targetBranchId,
+                            'name' => $ingredient->name,
+                            'sku' => $ingredient->sku,
+                            'unit' => $ingredient->unit,
+                            'cost_per_unit' => $ingredient->cost_per_unit,
+                            'stock' => 0,
+                            'low_stock_threshold' => $ingredient->low_stock_threshold,
+                        ]);
+                    }
+
+                    $syncData[$targetMaterial->id] = ['quantity' => $ingredient->pivot->quantity];
+                }
+                $newProduct->rawMaterials()->sync($syncData);
+                
+                // Recalculate HPP for target product
+                $newProduct->load('rawMaterials');
+                $newProduct->update(['cost_price' => $newProduct->calculateHpp()]);
+            }
+
+            // 3. Clone Variation Groups
+            if ($product->variationGroups->isNotEmpty()) {
+                $varSyncData = [];
+                foreach ($product->variationGroups as $vg) {
+                    $varSyncData[$vg->id] = ['sort_order' => $vg->pivot->sort_order];
+                }
+                $newProduct->variationGroups()->sync($varSyncData);
+            }
+
+            // 4. Clone Addons
+            if ($product->addons->isNotEmpty()) {
+                $addonSyncData = [];
+                foreach ($product->addons as $addon) {
+                    $addonSyncData[$addon->id] = ['sort_order' => $addon->pivot->sort_order];
+                }
+                $newProduct->addons()->sync($addonSyncData);
+            }
+        });
+
+        return back()->with('success', 'Product duplicated successfully to the target branch.');
     }
 }
