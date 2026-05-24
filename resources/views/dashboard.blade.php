@@ -5,7 +5,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Row 1: Primary KPIs (Today) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
         <!-- Today's Revenue -->
         <div class="bg-white rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-blue-200 hover:shadow-[0_8px_25px_-4px_rgba(59,130,246,0.1)] transition-all group relative overflow-hidden">
             <div class="absolute -right-6 -top-6 w-32 h-32 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
@@ -40,8 +40,29 @@
             </div>
         </div>
 
+        <!-- Today's Burgers Sold -->
+        <div class="bg-white rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-amber-200 hover:shadow-[0_8px_25px_-4px_rgba(245,158,11,0.1)] transition-all group relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-32 h-32 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+            <div class="flex items-start justify-between relative z-10 w-full">
+                <div class="flex-1 pr-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h3 class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest leading-none mt-1">Burger Terjual</h3>
+                        <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black rounded uppercase tracking-widest leading-none">Today</span>
+                    </div>
+                    <div class="text-2xl md:text-[28px] font-black text-gray-900 tracking-tight">{{ number_format($todayBurgersSold) }} <span class="text-sm font-semibold text-gray-400">Pcs</span></div>
+                </div>
+                <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                    <svg class="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 11a1 1 0 011-1h14a1 1 0 011 1v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15h14a2 2 0 012 2v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1a2 2 0 012-2z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
         <!-- Today's Net Profit -->
-        <div class="md:col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl p-5 md:p-6 shadow-[0_8px_25px_-4px_rgba(37,99,235,0.4)] border border-blue-800 hover:shadow-[0_12px_30px_-4px_rgba(37,99,235,0.5)] transition-all group relative overflow-hidden text-white">
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl p-5 md:p-6 shadow-[0_8px_25px_-4px_rgba(37,99,235,0.4)] border border-blue-800 hover:shadow-[0_12px_30px_-4px_rgba(37,99,235,0.5)] transition-all group relative overflow-hidden text-white">
             <div class="absolute -right-6 -top-6 w-32 h-32 bg-white rounded-full opacity-10 group-hover:scale-110 transition-transform duration-500"></div>
             <div class="flex items-start justify-between relative z-10 w-full">
                 <div class="flex-1 pr-4">
@@ -59,7 +80,7 @@
     </div>
 
     <!-- Row 2: Secondary Monthly KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mt-4 md:mt-6">
         <!-- Monthly Revenue -->
         <div class="bg-white rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-indigo-200 hover:shadow-[0_8px_25px_-4px_rgba(99,102,241,0.1)] transition-all flex flex-col justify-between group relative overflow-hidden">
             <div class="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
@@ -101,7 +122,7 @@
         </div>
 
         <!-- Monthly Net Profit -->
-        <div class="md:col-span-2 lg:col-span-1 bg-white rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-emerald-200 hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.1)] transition-all flex flex-col justify-between group relative overflow-hidden">
+        <div class="bg-white rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-emerald-200 hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.1)] transition-all flex flex-col justify-between group relative overflow-hidden">
             <div class="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
             
             <div class="flex items-start justify-between relative z-10 mb-6 w-full">
@@ -117,6 +138,30 @@
             <div class="relative z-10 pt-4 border-t border-gray-100 flex items-center justify-between w-full">
                 <span class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest">Monthly Expenses</span>
                 <span class="text-[11px] md:text-[12px] font-black text-red-500 tracking-tight">Rp {{ number_format($monthlyExpenses, 0, ',', '.') }}</span>
+            </div>
+        </div>
+
+        <!-- Monthly Burgers Sold -->
+        <div class="bg-white rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-amber-200 hover:shadow-[0_8px_25px_-4px_rgba(245,158,11,0.1)] transition-all flex flex-col justify-between group relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+            
+            <div class="flex items-start justify-between relative z-10 mb-6 w-full">
+                <div class="flex-1 pr-4">
+                    <h3 class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest mb-2 leading-none">Monthly Burger</h3>
+                    <div class="text-xl md:text-[26px] mt-1 font-black text-gray-900 tracking-tight leading-none">{{ number_format($monthlyBurgersSold) }} <span class="text-sm font-semibold text-gray-400">Pcs</span></div>
+                </div>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 11a1 1 0 011-1h14a1 1 0 011 1v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15h14a2 2 0 012 2v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1a2 2 0 012-2z"></path>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="relative z-10 pt-4 border-t border-gray-100 flex items-center justify-between w-full">
+                <span class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest">Avg. Burger Terjual</span>
+                <span class="text-gray-900 text-[11px] md:text-[12px] font-black tracking-tight">{{ number_format($averageBurgersPerDay, 1, ',', '.') }} Pcs/Day</span>
             </div>
         </div>
     </div>

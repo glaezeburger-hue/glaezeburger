@@ -93,6 +93,24 @@ class DashboardController extends Controller
 
         $monthlyNetProfit = $monthlyRevenue - $monthlyCogs - $monthlyExpenses;
 
+        // ── Today's & Monthly Burgers Sold Metrics ───────────────────
+        $burgerCategorySlugs = ['burger', 'combo'];
+
+        $todayBurgersSold = TransactionItem::whereIn('transaction_id', $todayTransactionIds)
+            ->whereHas('product.category', function ($q) use ($burgerCategorySlugs) {
+                $q->whereIn('slug', $burgerCategorySlugs);
+            })
+            ->sum('quantity') ?: 0;
+
+        $monthlyBurgersSold = TransactionItem::whereIn('transaction_id', $monthlyTransactionIds)
+            ->whereHas('product.category', function ($q) use ($burgerCategorySlugs) {
+                $q->whereIn('slug', $burgerCategorySlugs);
+            })
+            ->sum('quantity') ?: 0;
+
+        $daysPassed = Carbon::now()->day;
+        $averageBurgersPerDay = $daysPassed > 0 ? $monthlyBurgersSold / $daysPassed : 0;
+
         // ── Payment Split (Today) ───────────────────────────────
         $paymentSplit = Transaction::whereDate('created_at', $today)
             ->where('order_status', 'Sudah')
@@ -177,7 +195,8 @@ class DashboardController extends Controller
             'todayRevenue', 'totalOrdersToday', 'todayNetProfit', 'todayExpenses', 'pendingOrdersToday',
             'monthlyRevenue', 'monthlyOrdersCount', 'monthlyNetProfit', 'monthlyExpenses', 'averageOrderValue',
             'paymentSplit', 'salesByCategory', 'hourlyPattern', 'recentTransactions',
-            'bestSellers', 'lowStockMaterials', 'chartLabels', 'revenueChartData', 'expenseChartData'
+            'bestSellers', 'lowStockMaterials', 'chartLabels', 'revenueChartData', 'expenseChartData',
+            'todayBurgersSold', 'monthlyBurgersSold', 'averageBurgersPerDay'
         ));
     }
 }
