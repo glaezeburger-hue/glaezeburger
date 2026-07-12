@@ -112,6 +112,7 @@ class TransactionController extends Controller
                 'product_name' => $item->product->name ?? 'Deleted Product',
                 'quantity' => $item->quantity,
                 'price' => $item->price,
+                'cost_price' => $item->cost_price,
                 'subtotal' => $item->subtotal,
                 'notes' => $item->notes,
                 'variations' => $item->variations->map(fn($var) => [
@@ -316,6 +317,7 @@ class TransactionController extends Controller
                 $items[] = [
                     'product_id' => $product->id,
                     'price' => $finalPrice,
+                    'cost_price' => $product->cost_price,
                     'quantity' => $item['quantity'],
                     'subtotal' => $itemSubtotal,
                     'notes' => $item['notes'] ?? null,
@@ -406,6 +408,7 @@ class TransactionController extends Controller
                 $tItem = new \App\Models\TransactionItem([
                     'product_id' => $itemData['product_id'],
                     'price' => $itemData['price'],
+                    'cost_price' => $itemData['cost_price'],
                     'quantity' => $itemData['quantity'],
                     'subtotal' => $itemData['subtotal'],
                     'notes' => $itemData['notes'],
@@ -551,6 +554,7 @@ class TransactionController extends Controller
                     'product_name' => $item->product->name ?? 'Deleted Product',
                     'quantity' => $item->quantity,
                     'price' => $item->price,
+                    'cost_price' => $item->cost_price,
                     'subtotal' => $item->subtotal,
                     'notes' => $item->notes,
                     'variations' => $item->variations->map(fn($var) => [
@@ -612,6 +616,7 @@ class TransactionController extends Controller
                     $items[] = [
                         'product_id' => $product->id,
                         'price' => $price,
+                        'cost_price' => $product->cost_price,
                         'quantity' => $item['quantity'],
                         'subtotal' => $itemSubtotal,
                         'notes' => $item['notes'] ?? null,
@@ -670,6 +675,7 @@ class TransactionController extends Controller
                     $tItem = new \App\Models\TransactionItem([
                         'product_id' => $itemData['product_id'],
                         'price' => $itemData['price'],
+                        'cost_price' => $itemData['cost_price'],
                         'quantity' => $itemData['quantity'],
                         'subtotal' => $itemData['subtotal'],
                         'notes' => $itemData['notes'],

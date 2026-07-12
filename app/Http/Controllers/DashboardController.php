@@ -59,11 +59,9 @@ class DashboardController extends Controller
         $todayTransactionIds = $todayTransactions->pluck('id');
         
         $todayCogs = TransactionItem::whereIn('transaction_id', $todayTransactionIds)
-            ->with('product')
+            ->with(['variations', 'addons'])
             ->get()
-            ->sum(function($item) {
-                return $item->quantity * ($item->product->cost_price ?? 0);
-            });
+            ->sum(fn($item) => $item->getItemCogs());
 
         $restockCategoryIds = ExpenseCategory::where('is_restock', true)->pluck('id');
         $todayExpenses = Expense::whereDate('expense_date', $today)
@@ -80,11 +78,9 @@ class DashboardController extends Controller
         $monthlyTransactionIds = $monthlyTransactions->pluck('id');
 
         $monthlyCogs = TransactionItem::whereIn('transaction_id', $monthlyTransactionIds)
-            ->with('product')
+            ->with(['variations', 'addons'])
             ->get()
-            ->sum(function($item) {
-                return $item->quantity * ($item->product->cost_price ?? 0);
-            });
+            ->sum(fn($item) => $item->getItemCogs());
 
         $monthlyExpenses = Expense::whereMonth('expense_date', $currentMonth)
             ->whereYear('expense_date', $currentYear)
