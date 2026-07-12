@@ -46,7 +46,7 @@
             <div class="flex items-start justify-between relative z-10 w-full">
                 <div class="flex-1 pr-4">
                     <div class="flex items-center gap-2 mb-2">
-                        <h3 class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest leading-none mt-1">Burger Terjual</h3>
+                        <h3 class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest leading-none mt-1">Burger sold</h3>
                         <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black rounded uppercase tracking-widest leading-none">Today</span>
                     </div>
                     <div class="text-2xl md:text-[28px] font-black text-gray-900 tracking-tight">{{ number_format($todayBurgersSold) }} <span class="text-sm font-semibold text-gray-400">Pcs</span></div>
@@ -160,7 +160,7 @@
             </div>
             
             <div class="relative z-10 pt-4 border-t border-gray-100 flex items-center justify-between w-full">
-                <span class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest">Avg. Burger Terjual</span>
+                <span class="text-gray-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest">Avg. Burger sold</span>
                 <span class="text-gray-900 text-[11px] md:text-[12px] font-black tracking-tight">{{ number_format($averageBurgersPerDay, 1, ',', '.') }} Pcs/Day</span>
             </div>
         </div>
